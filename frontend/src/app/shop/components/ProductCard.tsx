@@ -57,12 +57,13 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
         [containerWidth, isMobile, naturalAspectRatio, product, rowAspectRatioRange, zoneH],
     );
     const artworkRatio = getProductAspectRatio(product, naturalAspectRatio);
+    const rowAspectRatioMin = rowAspectRatioRange?.min;
     const stageHeight = useMemo(() => {
-        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioRange?.min) return zoneH;
-        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioRange.min);
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) return zoneH;
+        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioMin);
         const stagePadding = isMobile ? (gridMode === "3" ? 6 : 10) : 14;
         return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
-    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioRange?.min, zoneH]);
+    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioMin, zoneH]);
 
     const recalc = useCallback(() => {
         const c = containerRef.current;

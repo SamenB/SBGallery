@@ -57,12 +57,13 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
         [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, work, zoneH],
     );
     const artworkRatio = getProductAspectRatio(work, naturalAspectRatio);
+    const rowAspectRatioMin = rowAspectRatioRange?.min;
     const stageHeight = useMemo(() => {
-        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioRange?.min) return zoneH;
-        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioRange.min);
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) return zoneH;
+        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioMin);
         const stagePadding = isMobile ? (gridMode === "3" ? 4 : 8) : 10;
         return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
-    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioRange?.min, zoneH]);
+    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioMin, zoneH]);
 
     // Sync on parent prop change (e.g., after DB load)
     useEffect(() => { setLiked(initialLiked || false); }, [initialLiked]);
