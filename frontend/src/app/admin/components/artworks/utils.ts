@@ -60,7 +60,10 @@ export function createDefaultFormState(): ArtworkFormState {
     };
 }
 
-export function resolveImageUrl(img: ImageEntry, prefer: "thumb" | "medium" | "original" = "thumb"): string {
+export function resolveImageUrl(
+    img: ImageEntry,
+    prefer: "thumb" | "medium" | "large" | "original" = "thumb",
+): string {
     if (typeof img === "string") {
         return img.startsWith("http") ? img : `${getApiUrl().replace("/api", "")}${img}`;
     }

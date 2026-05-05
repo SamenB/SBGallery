@@ -7,6 +7,7 @@ and scheduled maintenance tasks like email notifications.
 import asyncio
 import time
 from pathlib import Path
+from typing import TypedDict
 
 from loguru import logger
 from PIL import Image
@@ -16,6 +17,19 @@ from src.database import new_session_null_pool
 from src.models.artworks import ArtworksOrm
 from src.tasks.celery_app import celery_instance
 from src.utils.db_manager import DBManager
+
+
+class ImageVariantSpec(TypedDict):
+    max_size: tuple[int, int] | None
+    quality: int
+
+
+IMAGE_VARIANT_SPECS: dict[str, ImageVariantSpec] = {
+    "original": {"max_size": None, "quality": 92},
+    "large": {"max_size": (2560, 2560), "quality": 90},
+    "medium": {"max_size": (1600, 1600), "quality": 86},
+    "thumb": {"max_size": (500, 500), "quality": 78},
+}
 
 
 def run_async(coro):
@@ -31,6 +45,41 @@ def run_async(coro):
         loop.close()
 
 
+def _normalize_image_for_webp(img: Image.Image) -> Image.Image:
+    if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+        alpha = img.convert("RGBA").split()[-1]
+        bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
+        bg.paste(img, mask=alpha)
+        return bg.convert("RGB")
+    if img.mode != "RGB":
+        return img.convert("RGB")
+    return img
+
+
+def generate_gallery_image_variants(
+    *,
+    source_img: Image.Image,
+    output_dir: Path,
+    prefix: str,
+) -> dict[str, str]:
+    variants: dict[str, str] = {}
+    for variant, spec in IMAGE_VARIANT_SPECS.items():
+        image = source_img.copy()
+        max_size = spec["max_size"]
+        if max_size is not None:
+            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        filename = f"{prefix}_{variant}.webp"
+        image.save(
+            output_dir / filename,
+            format="WEBP",
+            quality=spec["quality"],
+            method=6,
+        )
+        variants[variant] = f"/static/images/{filename}"
+    return variants
+
+
 @celery_instance.task
 def process_and_attach_image(model_type: str, model_id: int, temp_paths: list[str]):
     """
@@ -38,7 +87,7 @@ def process_and_attach_image(model_type: str, model_id: int, temp_paths: list[st
 
     Logic:
     1. Creates target directories if missing.
-    2. Converts images to WebP format with different resolutions (original, medium, thumb).
+    2. Converts images to WebP format with storefront variants (original, large, medium, thumb).
     3. Handles transparency and color modes.
     4. Saves optimized files with globally unique names to prevent collisions.
     5. Updates the database record with the new image URL metadata.
@@ -62,40 +111,16 @@ def process_and_attach_image(model_type: str, model_id: int, temp_paths: list[st
                 continue
 
             with Image.open(file_path) as img:
-                # Standardize to RGB for WebP compatibility, handling transparency.
-                if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
-                    alpha = img.convert("RGBA").split()[-1]
-                    bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
-                    bg.paste(img, mask=alpha)
-                    img = bg.convert("RGB")
-                elif img.mode != "RGB":
-                    img = img.convert("RGB")
+                img = _normalize_image_for_webp(img)
 
                 # Generate unique filename prefix using model ID and timestamp.
                 prefix = f"{model_type}_{model_id}_{upload_ts}_{idx}"
-
-                # 1. Store Original (High Quality preservation)
-                original_name = f"{prefix}_original.webp"
-                img.save(output_dir / original_name, format="WEBP", quality=92)
-
-                # 2. Store Medium (Optimized for standard viewing, max 1200px)
-                medium_img = img.copy()
-                medium_img.thumbnail((1200, 1200))
-                medium_name = f"{prefix}_medium.webp"
-                medium_img.save(output_dir / medium_name, format="WEBP", quality=82)
-
-                # 3. Store Thumb (Optimized for grids/lists, max 400px)
-                thumb_img = img.copy()
-                thumb_img.thumbnail((400, 400))
-                thumb_name = f"{prefix}_thumb.webp"
-                thumb_img.save(output_dir / thumb_name, format="WEBP", quality=75)
-
                 final_paths.append(
-                    {
-                        "original": f"/static/images/{original_name}",
-                        "medium": f"/static/images/{medium_name}",
-                        "thumb": f"/static/images/{thumb_name}",
-                    }
+                    generate_gallery_image_variants(
+                        source_img=img,
+                        output_dir=output_dir,
+                        prefix=prefix,
+                    )
                 )
 
             # Delete the temporary uploaded file to free space.

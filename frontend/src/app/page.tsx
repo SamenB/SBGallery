@@ -26,7 +26,7 @@ interface Artwork {
   original_status: OriginalStatus;
   has_prints?: boolean;
   base_print_price?: number;
-  images?: (string | { thumb: string; medium: string; original: string })[];
+  images?: (string | { thumb?: string; medium?: string; large?: string; original?: string })[];
   /** Optional background gradient for UI cards (computed on-the-fly). */
   gradientFrom?: string;
   /** Optional background gradient for UI cards (computed on-the-fly). */

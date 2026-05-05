@@ -168,15 +168,22 @@ function formatApiErrorBody(body: unknown, fallback: string): string {
 
 /**
  * Generates an absolute or relative image URL based on the image's structure.
- * Supports both static paths and variant-specific objects (thumb, medium, original).
+ * Supports both static paths and variant-specific objects (thumb, medium, large, original).
  */
+export type ImageVariant = {
+  thumb?: string;
+  medium?: string;
+  large?: string;
+  original?: string;
+};
+
 export const getImageUrl = (
   image:
     | string
-    | { thumb?: string; medium?: string; original?: string }
+    | ImageVariant
     | null
     | undefined,
-  prefer: "thumb" | "medium" | "original" = "medium",
+  prefer: "thumb" | "medium" | "large" | "original" = "medium",
   serverHost?: string,
 ): string | undefined => {
   if (!image) return undefined;
@@ -185,9 +192,9 @@ export const getImageUrl = (
   if (typeof image === "string") {
     path = image;
   } else {
-    // Fallback hierarchy: preferred -> medium -> original -> thumb.
+    // Fallback hierarchy keeps new high-quality gallery images backward-compatible.
     path =
-      (image as any)[prefer] || image.medium || image.original || image.thumb;
+      image[prefer] || image.large || image.medium || image.original || image.thumb;
   }
 
   if (!path) return undefined;

@@ -1,7 +1,8 @@
 export interface ArtworkImage {
-    thumb: string;
-    medium: string;
-    original: string;
+    thumb?: string;
+    medium?: string;
+    large?: string;
+    original?: string;
 }
 
 export type ImageEntry = string | ArtworkImage;

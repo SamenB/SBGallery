@@ -34,7 +34,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     const ori = (product.orientation || "vertical").toLowerCase();
     const isHorizontal = ori === "horizontal";
     const isSquare = ori === "square";
-    const imgSrc = product.images?.[0] ? getImageUrl(product.images[0], "medium") || "" : "";
+    const imgSrc = product.images?.[0] ? getImageUrl(product.images[0], "large") || "" : "";
     const st = STATUS[product.original_status];
 
     const containerRef = useRef<HTMLDivElement>(null);

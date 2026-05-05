@@ -16,7 +16,7 @@ interface Artwork {
     size: string;
     original_status: string;
     description?: string;
-    images?: (string | { thumb: string; medium: string; original: string })[];
+    images?: (string | { thumb?: string; medium?: string; large?: string; original?: string })[];
     gradientFrom?: string;
     gradientTo?: string;
 }

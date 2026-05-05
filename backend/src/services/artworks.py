@@ -5,6 +5,7 @@ and bulk processing, abstracting data access from the API layer.
 """
 
 import re
+from pathlib import Path
 
 from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
@@ -47,6 +48,32 @@ class ArtworkService(BaseService):
     @staticmethod
     def _serialize_admin_artwork(artwork):
         return artwork.model_dump(mode="json")
+
+    @staticmethod
+    def _collect_image_file_paths(images: list | None) -> set[str]:
+        paths: set[str] = set()
+        for img_entry in images or []:
+            if isinstance(img_entry, dict):
+                values = img_entry.values()
+            else:
+                values = [img_entry]
+            for variant_url in values:
+                if isinstance(variant_url, str) and variant_url:
+                    paths.add(variant_url.lstrip("/"))
+        return paths
+
+    @staticmethod
+    def _delete_files_best_effort(file_paths: set[str] | list[str]) -> int:
+        removed = 0
+        for file_path in file_paths:
+            try:
+                path = Path(file_path)
+                if path.is_file():
+                    path.unlink()
+                    removed += 1
+            except OSError as exc:
+                logger.warning("Failed to remove file {}: {}", file_path, exc)
+        return removed
 
     async def _attach_storefront_summaries(
         self,
@@ -320,7 +347,12 @@ class ArtworkService(BaseService):
         """
         artwork_data_dict = artwork_data.model_dump(exclude_unset=True)
         # Verify artwork existence
-        await self.db.artworks.get_one(id=artwork_id)
+        existing = await self.db.artworks.get_one(id=artwork_id)
+        removed_image_paths: set[str] = set()
+        if "images" in artwork_data_dict:
+            previous_paths = self._collect_image_file_paths(existing.images)
+            next_paths = self._collect_image_file_paths(artwork_data_dict.get("images"))
+            removed_image_paths = previous_paths - next_paths
 
         try:
             _artwork_data = ArtworkPatch(**artwork_data_dict)
@@ -331,6 +363,13 @@ class ArtworkService(BaseService):
         except SQLAlchemyError:
             await self.db.rollback()
             raise DatabaseException
+        if removed_image_paths:
+            removed_count = self._delete_files_best_effort(removed_image_paths)
+            logger.info(
+                "Artwork image files removed after patch: id={}, files_removed={}",
+                artwork_id,
+                removed_count,
+            )
         await self._refresh_materialized_storefront([artwork_id])
         logger.info("Artwork partially updated: id={}", artwork_id)
 
@@ -363,13 +402,7 @@ class ArtworkService(BaseService):
         dirs_to_delete: list[str] = []
 
         # 1a. Gallery images from the JSON `images` column
-        for img_entry in artwork.images or []:
-            if isinstance(img_entry, dict):
-                for variant_url in img_entry.values():
-                    if isinstance(variant_url, str) and variant_url:
-                        files_to_delete.append(variant_url.lstrip("/"))
-            elif isinstance(img_entry, str) and img_entry:
-                files_to_delete.append(img_entry.lstrip("/"))
+        files_to_delete.extend(self._collect_image_file_paths(artwork.images))
 
         # 1b. Print source master (high-res TIFF/PNG uploaded for Prodigi)
         if artwork.print_quality_url:
@@ -394,12 +427,7 @@ class ArtworkService(BaseService):
             raise DatabaseException
 
         # ── 3. Clean up files on disk (best-effort, after commit) ────────
-        for file_path in files_to_delete:
-            try:
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-            except OSError as exc:
-                logger.warning("Failed to remove file {}: {}", file_path, exc)
+        self._delete_files_best_effort(files_to_delete)
 
         for dir_path in dirs_to_delete:
             try:

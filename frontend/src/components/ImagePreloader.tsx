@@ -11,7 +11,7 @@ import { getApiUrl, getImageUrl, apiFetch, apiJson } from "@/utils";
 
 interface Artwork {
     id: number;
-    images?: (string | { thumb?: string; medium?: string; original?: string })[];
+    images?: (string | { thumb?: string; medium?: string; large?: string; original?: string })[];
 }
 
 export default function ImagePreloader() {

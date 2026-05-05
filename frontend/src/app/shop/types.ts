@@ -9,7 +9,7 @@ export interface Product {
     size: string;
     original_price: number;
     original_status: OriginalStatus;
-    images?: (string | { thumb: string; medium: string; original: string })[];
+    images?: (string | { thumb?: string; medium?: string; large?: string; original?: string })[];
     width_cm?: number;
     height_cm?: number;
     width_in?: number;

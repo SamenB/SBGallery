@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.exeptions import ObjectAlreadyExistsException
-from src.schemas.artworks import ArtworkAddRequest
+from src.schemas.artworks import ArtworkAddRequest, ArtworkPatchRequest
 from src.services.artworks import ArtworkService
 
 
@@ -81,4 +81,38 @@ async def test_delete_artwork(artwork_service):
     await artwork_service.delete_artwork(1)
 
     artwork_service.db.artworks.delete.assert_awaited_once_with(id=1)
+    artwork_service.db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_patch_images_removes_files_no_longer_referenced(
+    artwork_service, tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    stale_dir = tmp_path / "static" / "images"
+    stale_dir.mkdir(parents=True)
+    stale_file = stale_dir / "old_large.webp"
+    kept_file = stale_dir / "kept_large.webp"
+    stale_file.write_bytes(b"old")
+    kept_file.write_bytes(b"kept")
+
+    artwork_service._refresh_materialized_storefront = AsyncMock()
+    artwork_service.db.artworks.get_one.return_value = MagicMock(
+        images=[
+            {
+                "large": "/static/images/old_large.webp",
+                "medium": "/static/images/old_medium.webp",
+            },
+            {"large": "/static/images/kept_large.webp"},
+        ]
+    )
+
+    await artwork_service.update_artwork_partially(
+        1,
+        ArtworkPatchRequest(images=[{"large": "/static/images/kept_large.webp"}]),
+    )
+
+    assert not stale_file.exists()
+    assert kept_file.exists()
+    artwork_service.db.artworks.edit.assert_awaited_once()
     artwork_service.db.commit.assert_awaited_once()
