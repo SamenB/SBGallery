@@ -340,7 +340,7 @@ export default function GalleryPage() {
     return (
         <div style={{ overflowX: "clip", maxWidth: "100vw", width: "100%" }}>
             {lightbox && <Lightbox works={lightbox.works as any} startWorkIndex={lightbox.index} onClose={() => setLightbox(null)} />}
-            <div style={{ maxWidth: "1600px", margin: "0 auto", padding: isMobile ? "1rem 1rem 2rem 1rem" : "1.5rem 2.5rem 2rem" }}>
+            <div style={{ maxWidth: "1600px", margin: "0 auto", padding: isMobile ? "1rem 0.75rem 2rem 0.75rem" : "1.5rem 2.5rem 2rem" }}>
                 {/* Control Bar: Sorting and Layout density toggles. */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: isMobile ? "0.75rem" : "1rem", flexWrap: isMobile ? "nowrap" : "wrap", overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? "5px" : 0, scrollbarWidth: "none" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.75rem" : "1.5rem", flexShrink: 0 }}>
@@ -489,7 +489,7 @@ export default function GalleryPage() {
                                         display: "flex", alignItems: "center", gap: "1rem",
                                         backgroundColor: "transparent",
                                         width: "100%",
-                                        padding: isMobile ? "0.6rem 1.25rem" : "0.6rem 1.5rem",
+                                        padding: isMobile ? "0.6rem 0.75rem" : "0.6rem 1.5rem",
                                         borderBottom: "1px solid rgba(26,26,24,0.35)",
                                     }}>
                                         <h2 style={{
@@ -512,7 +512,7 @@ export default function GalleryPage() {
                                 <div style={{ overflow: "hidden", padding: "20px 0 20px 0", margin: "-15px 0 0 0" }}>
                                     <div className="magnetic-scroll" style={{
                                         width: "100%",
-                                        padding: isMobile ? "0 1.25rem 1rem" : "0 0 0.5rem",
+                                        padding: isMobile ? "0 0.75rem 1rem" : "0 0 0.5rem",
                                     }}>
                                         <div className={`art-grid`} style={{
                                             maxWidth: "1600px",

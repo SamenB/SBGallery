@@ -15,7 +15,7 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
     { key: "available", label: "Available" },
 ];
 
-export const IMAGE_ZONE: Record<string, number> = { "1": 480, "2": 380, "3": 260 };
+export const IMAGE_ZONE: Record<string, number> = { "1": 560, "2": 440, "3": 300 };
 
 export const STATUS: Record<string, { label: string; badgeBg: string; badgeText: string; textColor: string }> = {
     available:     { label: "AVAILABLE",    badgeBg: "rgba(100,185,120,0.13)", badgeText: "#3a7a4a",  textColor: "#6DB87E" },

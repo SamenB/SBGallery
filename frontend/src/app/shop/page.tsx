@@ -656,7 +656,7 @@ function ShopPageContent() {
                     {filtersJSX}
                 </aside>
 
-                <div style={{ flex: 1, minWidth: 0, padding: isMobile ? "1rem 1rem 6rem 1rem" : "1rem 2.5rem 6rem 2rem" }}>
+                <div style={{ flex: 1, minWidth: 0, padding: isMobile ? "1rem 0.75rem 6rem 0.75rem" : "1rem 2.5rem 6rem 2rem" }}>
                     {/* Catalog Control Bar: Status counter and sort/grid density toggles. */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem", flexWrap: isMobile ? "nowrap" : "wrap", gap: isMobile ? "0.75rem" : "1rem", overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? "5px" : 0, scrollbarWidth: "none" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem", flexShrink: 0 }}>
