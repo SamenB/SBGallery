@@ -5,9 +5,11 @@
  * Renders an abstract container that dynamically frames artwork based on its physical properties (orientation, gradient).
  */
 
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { artworkUrl, getImageUrl } from "@/utils";
+import { getEqualAreaImageSize } from "@/app/shop/utils";
+import type { AspectRatioRange } from "@/app/shop/utils";
 
 const STATUS: Record<string, { label: string; badgeBg: string; badgeText: string; textColor: string }> = {
   available: { label: "AVAILABLE", badgeBg: "rgba(100,185,120,0.13)", badgeText: "#3a7a4a", textColor: "#6DB87E" },
@@ -22,9 +24,12 @@ const STATUS: Record<string, { label: string; badgeBg: string; badgeText: string
 interface Props {
   work: any;
   zoneH?: number;
+  rowAspectRatioRange?: AspectRatioRange;
+  onNaturalAspectRatio?: (id: number, ratio: number) => void;
+  onContainerWidthChange?: (id: number, width: number) => void;
 }
 
-export default function HomeArtCard({ work, zoneH = 380 }: Props) {
+export default function HomeArtCard({ work, zoneH = 380, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: Props) {
   const ori = (work.orientation || "vertical").toLowerCase();
   const isHorizontal = ori === "horizontal";
   const isSquare = ori === "square";
@@ -35,9 +40,23 @@ export default function HomeArtCard({ work, zoneH = 380 }: Props) {
   const [textPad, setTextPad] = useState(0);
   const [emptyBottom, setEmptyBottom] = useState(0);
   const [measuredImgH, setMeasuredImgH] = useState(0);
-  const [measuredImgW, setMeasuredImgW] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(false);
   const [imgHovered, setImgHovered] = useState(false);
+  const equalAreaImageSize = useMemo(
+    () => getEqualAreaImageSize({
+      product: work,
+      containerWidth,
+      zoneHeight: zoneH,
+      isMobile,
+      rowAspectRatioRange,
+      naturalAspectRatio,
+      maxWidthRatio: 0.76,
+      maxHeightRatio: 0.9,
+    }),
+    [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, work, zoneH],
+  );
 
   useEffect(() => {
       setIsMobile(window.innerWidth < 1024);
@@ -51,12 +70,16 @@ export default function HomeArtCard({ work, zoneH = 380 }: Props) {
     if (inner.tagName === "IMG") {
       const img = inner as HTMLImageElement;
       if (!img.complete || !img.naturalWidth) return;
+      const ratio = img.naturalWidth / img.naturalHeight;
+      setNaturalAspectRatio(ratio);
+      onNaturalAspectRatio?.(work.id, ratio);
     }
+    setContainerWidth(c.clientWidth);
+    onContainerWidthChange?.(work.id, c.clientWidth);
     setTextPad(Math.max(0, (c.clientWidth - inner.offsetWidth) / 2));
     setEmptyBottom(Math.max(0, (c.clientHeight - inner.offsetHeight) / 2));
     setMeasuredImgH(inner.offsetHeight);
-    setMeasuredImgW(inner.offsetWidth);
-  }, []);
+  }, [onContainerWidthChange, onNaturalAspectRatio, work.id]);
 
   useEffect(() => {
     recalc();
@@ -66,7 +89,17 @@ export default function HomeArtCard({ work, zoneH = 380 }: Props) {
 
   useEffect(() => {
     requestAnimationFrame(recalc);
-  }, [zoneH, recalc]);
+  }, [zoneH, equalAreaImageSize, recalc]);
+
+  const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+      const ratio = image.naturalWidth / image.naturalHeight;
+      setNaturalAspectRatio(ratio);
+      onNaturalAspectRatio?.(work.id, ratio);
+    }
+    recalc();
+  }, [onNaturalAspectRatio, recalc, work.id]);
 
   return (
     <Link
@@ -106,14 +139,14 @@ export default function HomeArtCard({ work, zoneH = 380 }: Props) {
             src={imgSrc}
             alt={work.title}
             className="art-card-inner"
-            onLoad={recalc}
+            onLoad={handleImageLoad}
             onMouseEnter={() => { if (!isMobile) setImgHovered(true); }}
             onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
             style={{
               display: "block",
               maxWidth: "76%",
-              maxHeight: isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
-              width: "auto",
+              maxHeight: equalAreaImageSize ? `${zoneH * 0.9}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
+              width: equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
               height: "auto",
               borderRadius: "4px",
               alignSelf: "center",

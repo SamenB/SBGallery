@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type SyntheticEvent } from "react";
 import { usePreferences } from "@/context/PreferencesContext";
 import { getImageUrl } from "@/utils";
 import { Artwork } from "../types";
 import { STATUS } from "../constants";
+import { getEqualAreaImageSize } from "@/app/shop/utils";
+import type { AspectRatioRange } from "@/app/shop/utils";
 
 interface ArtCardProps {
     work: Artwork;
@@ -15,13 +17,16 @@ interface ArtCardProps {
     liked?: boolean;
     onLike?: (id: number, newState: boolean) => void;
     onAuthRequired?: (id: number, newState: boolean) => void;
+    rowAspectRatioRange?: AspectRatioRange;
+    onNaturalAspectRatio?: (id: number, ratio: number) => void;
+    onContainerWidthChange?: (id: number, width: number) => void;
 }
 
 /**
  * Individual gallery card component.
  * Dynamically calculates padding and positioning to anchor title boxes strictly to image edges.
  */
-export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired }: ArtCardProps) {
+export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: ArtCardProps) {
     const { units } = usePreferences();
     const ori = (work.orientation || "vertical").toLowerCase();
     const isHorizontal = ori === "horizontal";
@@ -33,10 +38,24 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
     const [textPad, setTextPad] = useState(0);
     const [emptyBottom, setEmptyBottom] = useState(0);
     const [measuredImgH, setMeasuredImgH] = useState(0); // Track exact image height safely
-    const [measuredImgW, setMeasuredImgW] = useState(0); // Track exact image width safely
+    const [containerWidth, setContainerWidth] = useState(0);
+    const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | undefined>(undefined);
     const [imgHovered, setImgHovered] = useState(false);
     const [liked, setLiked] = useState(initialLiked || false);
     const [likeAnimating, setLikeAnimating] = useState(false);
+    const equalAreaImageSize = useMemo(
+        () => getEqualAreaImageSize({
+            product: work,
+            containerWidth,
+            zoneHeight: zoneH,
+            isMobile,
+            rowAspectRatioRange,
+            naturalAspectRatio,
+            maxWidthRatio: 0.76,
+            maxHeightRatio: 0.9,
+        }),
+        [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, work, zoneH],
+    );
 
     // Sync on parent prop change (e.g., after DB load)
     useEffect(() => { setLiked(initialLiked || false); }, [initialLiked]);
@@ -64,12 +83,16 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
         if (inner.tagName === "IMG") {
             const img = inner as HTMLImageElement;
             if (!img.complete || !img.naturalWidth) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            setNaturalAspectRatio(ratio);
+            onNaturalAspectRatio?.(work.id, ratio);
         }
+        setContainerWidth(c.clientWidth);
+        onContainerWidthChange?.(work.id, c.clientWidth);
         setTextPad(Math.max(0, (c.clientWidth - inner.offsetWidth) / 2));
         setEmptyBottom(Math.max(0, (c.clientHeight - inner.offsetHeight) / 2));
         setMeasuredImgH(inner.offsetHeight);
-        setMeasuredImgW(inner.offsetWidth);
-    }, []);
+    }, [onContainerWidthChange, onNaturalAspectRatio, work.id]);
 
     useEffect(() => {
         recalc();
@@ -80,7 +103,17 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
     // Recalculate whenever the viewing zone height changes (e.g., density toggle).
     useEffect(() => {
         requestAnimationFrame(recalc);
-    }, [zoneH, recalc]);
+    }, [zoneH, equalAreaImageSize, recalc]);
+
+    const handleImageLoad = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
+        const image = event.currentTarget;
+        if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+            const ratio = image.naturalWidth / image.naturalHeight;
+            setNaturalAspectRatio(ratio);
+            onNaturalAspectRatio?.(work.id, ratio);
+        }
+        recalc();
+    }, [onNaturalAspectRatio, recalc, work.id]);
 
     return (
         <div
@@ -122,14 +155,15 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         alt={work.title}
                         className="art-card-inner"
                         loading="lazy"
-                        onLoad={recalc}
+                        onLoad={handleImageLoad}
                         onMouseEnter={() => { if (!isMobile) setImgHovered(true); }}
                         onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
                         style={{
                             display: "block",
-                            maxWidth: "76%",
-                            maxHeight: isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
-                            width: "auto", height: "auto",
+                            maxWidth: isMobile ? "100%" : "76%",
+                            maxHeight: equalAreaImageSize ? `${zoneH * 0.9}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
+                            width: equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
+                            height: "auto",
                             borderRadius: "4px",
                             alignSelf: "center",
                             flexShrink: 0,

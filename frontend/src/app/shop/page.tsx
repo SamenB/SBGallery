@@ -18,7 +18,7 @@ import GoogleLoginButton from "@/components/GoogleLoginButton";
 
 import { Product, Label, LabelCategory, SortKey } from "./types";
 import { DEFAULT_GRADIENTS, SORT_OPTIONS, IMAGE_ZONE } from "./constants";
-import { getOrientation, sortProducts } from "./utils";
+import { getOrientation, getProductAspectRatio, sortProducts } from "./utils";
 import { ProductCard } from "./components/ProductCard";
 import { FilterCheckbox } from "./components/FilterCheckbox";
 import { SidebarSection } from "./components/SidebarSection";
@@ -101,6 +101,8 @@ function ShopPageContent() {
     const [isPhone, setIsPhone] = useState(false);
     const [gridMode, setGridMode] = useState<"1" | "2" | "3">("2");
     const [gridLoaded, setGridLoaded] = useState(false);
+    const [naturalAspectRatios, setNaturalAspectRatios] = useState<Record<number, number>>({});
+    const [artworkContainerWidths, setArtworkContainerWidths] = useState<Record<number, number>>({});
 
     const { globalPrintPrice, convertPrice, units, pendingLikes, addPendingLike, removePendingLike, unauthLikeCount, incrementUnauthLikeCount } = usePreferences();
     const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
@@ -379,6 +381,24 @@ function ShopPageContent() {
         });
     }, []);
 
+    const handleNaturalAspectRatio = useCallback((id: number, ratio: number) => {
+        setNaturalAspectRatios(prev => {
+            if (prev[id] === ratio) {
+                return prev;
+            }
+            return { ...prev, [id]: ratio };
+        });
+    }, []);
+
+    const handleContainerWidthChange = useCallback((id: number, width: number) => {
+        setArtworkContainerWidths(prev => {
+            if (prev[id] === width) {
+                return prev;
+            }
+            return { ...prev, [id]: width };
+        });
+    }, []);
+
     /** Final sorted results for exhibition, respecting pagination and display limits. */
     const displayed = useMemo(() => {
         return sortProducts(filtered, SORT_OPTIONS[sortIdx].key, globalPrintPrice).slice(0, visibleCount);
@@ -424,24 +444,30 @@ function ShopPageContent() {
         if (inView && visibleCount < filtered.length) setVisibleCount(prev => prev + itemsPerPage);
     }, [inView, filtered.length, visibleCount, itemsPerPage]);
 
-    /** CSS grid column mapping for the current density mode. */
-    const getColumns = () => {
+    /** Numeric grid column mapping for row-aware artwork sizing. */
+    const getColumnCount = () => {
         if (isMobile) {
             if (isPhone) {
-                if (gridMode === "1") return "1fr";
-                if (gridMode === "2") return "repeat(2, 1fr)";
-                return "repeat(3, 1fr)";
+                if (gridMode === "1") return 1;
+                if (gridMode === "2") return 2;
+                return 3;
             } else {
                 // Tablet layout
-                if (gridMode === "1") return "repeat(2, 1fr)";
-                if (gridMode === "2") return "repeat(3, 1fr)";
-                return "repeat(4, 1fr)";
+                if (gridMode === "1") return 2;
+                if (gridMode === "2") return 3;
+                return 4;
             }
         }
         // Desktop layout (Strict grid structure)
-        if (gridMode === "1") return "repeat(2, 1fr)";
-        if (gridMode === "2") return "repeat(3, 1fr)"; // Strictly 3 items
-        return "repeat(4, 1fr)";
+        if (gridMode === "1") return 2;
+        if (gridMode === "2") return 3; // Strictly 3 items
+        return 4;
+    };
+
+    /** CSS grid column mapping for the current density mode. */
+    const getColumns = () => {
+        const columnCount = getColumnCount();
+        return columnCount === 1 ? "1fr" : `repeat(${columnCount}, 1fr)`;
     };
 
     /** CSS grid gap mapping for the current density mode. */
@@ -462,6 +488,31 @@ function ShopPageContent() {
         if (gridMode === "2") return "3rem 16px";
         return "2rem 10px";
     };
+
+    const columnCount = getColumnCount();
+    const rowAspectRatioRanges = useMemo(() => {
+        return displayed.map((_, index) => {
+            const rowStart = Math.floor(index / columnCount) * columnCount;
+            const rowProducts = displayed.slice(rowStart, rowStart + columnCount);
+            const ratios = rowProducts
+                .map(product => getProductAspectRatio(product, naturalAspectRatios[product.id]))
+                .filter((ratio): ratio is number => ratio !== null);
+
+            if (ratios.length === 0) {
+                return undefined;
+            }
+
+            const rowContainerWidths = rowProducts
+                .map(product => artworkContainerWidths[product.id])
+                .filter((width): width is number => Boolean(width));
+
+            return {
+                min: Math.min(...ratios),
+                max: Math.max(...ratios),
+                containerWidth: rowContainerWidths.length > 0 ? Math.min(...rowContainerWidths) : undefined,
+            };
+        });
+    }, [artworkContainerWidths, columnCount, displayed, naturalAspectRatios]);
 
     /** 
      * Shared filter panel composition.
@@ -652,6 +703,9 @@ function ShopPageContent() {
                                 countryCode={activeCountryCode}
                                 likedIds={effectiveLikedIds}
                                 listIndex={i}
+                                rowAspectRatioRange={rowAspectRatioRanges[i]}
+                                onNaturalAspectRatio={handleNaturalAspectRatio}
+                                onContainerWidthChange={handleContainerWidthChange}
                                 onAuthRequired={!user ? handleAuthRequired : undefined}
                                 onLikeChange={handleLikeChange}
                             />)}

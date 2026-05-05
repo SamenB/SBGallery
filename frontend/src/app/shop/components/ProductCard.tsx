@@ -6,9 +6,10 @@ import { usePreferences } from "@/context/PreferencesContext";
 import { getApiUrl, getImageUrl } from "@/utils";
 import { Product } from "../types";
 import { STATUS } from "../constants";
-import { buildArtworkHref, getStorefrontSummary } from "../utils";
+import { buildArtworkHref, getEqualAreaImageSize, getStorefrontSummary } from "../utils";
+import type { AspectRatioRange } from "../utils";
 
-export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange }: {
+export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: {
     product: Product; zoneH: number; gridMode: string; isMobile: boolean;
     countryCode?: string;
     initialLiked?: boolean;
@@ -16,6 +17,9 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     onAuthRequired?: (id: number, newState: boolean) => void;
     listIndex?: number;
     onLikeChange?: (id: number, liked: boolean) => void;
+    rowAspectRatioRange?: AspectRatioRange;
+    onNaturalAspectRatio?: (id: number, ratio: number) => void;
+    onContainerWidthChange?: (id: number, width: number) => void;
 }) {
     const { convertPrice, units } = usePreferences();
     const storefrontSummary = getStorefrontSummary(product);
@@ -41,12 +45,17 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     const [textPad, setTextPad] = useState(0);
     const [emptyBottom, setEmptyBottom] = useState(0);
     const [measuredImgH, setMeasuredImgH] = useState(0);
-    const [measuredImgW, setMeasuredImgW] = useState(0);
+    const [containerWidth, setContainerWidth] = useState(0);
+    const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | undefined>(undefined);
     const [imgHovered, setImgHovered] = useState(false);
     const [localLiked, setLocalLiked] = useState(initialLiked || false);
     const [likeAnimating, setLikeAnimating] = useState(false);
 
     const liked = likedIds !== undefined ? likedIds.has(product.id) : localLiked;
+    const equalAreaImageSize = useMemo(
+        () => getEqualAreaImageSize({ product, containerWidth, zoneHeight: zoneH, isMobile, rowAspectRatioRange, naturalAspectRatio }),
+        [containerWidth, isMobile, naturalAspectRatio, product, rowAspectRatioRange, zoneH],
+    );
 
     const recalc = useCallback(() => {
         const c = containerRef.current;
@@ -56,12 +65,16 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
         if (inner.tagName === "IMG") {
             const img = inner as HTMLImageElement;
             if (!img.complete || !img.naturalWidth) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            setNaturalAspectRatio(ratio);
+            onNaturalAspectRatio?.(product.id, ratio);
         }
+        setContainerWidth(c.clientWidth);
+        onContainerWidthChange?.(product.id, c.clientWidth);
         setTextPad(Math.max(0, (c.clientWidth - inner.offsetWidth) / 2));
         setEmptyBottom(Math.max(0, (c.clientHeight - inner.offsetHeight) / 2));
         setMeasuredImgH(inner.offsetHeight);
-        setMeasuredImgW(inner.offsetWidth);
-    }, []);
+    }, [onContainerWidthChange, onNaturalAspectRatio, product.id]);
 
     useEffect(() => {
         recalc();
@@ -71,7 +84,17 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
 
     useEffect(() => {
         requestAnimationFrame(recalc);
-    }, [zoneH, recalc]);
+    }, [zoneH, equalAreaImageSize, recalc]);
+
+    const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
+        const image = event.currentTarget;
+        if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+            const ratio = image.naturalWidth / image.naturalHeight;
+            setNaturalAspectRatio(ratio);
+            onNaturalAspectRatio?.(product.id, ratio);
+        }
+        recalc();
+    }, [onNaturalAspectRatio, product.id, recalc]);
 
     const sizeStr = useMemo(() => {
         const w = units === "in" ? product.width_in : product.width_cm;
@@ -139,12 +162,16 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                             className="art-card-inner"
                             loading={listIndex !== undefined && listIndex < 4 ? "eager" : "lazy"}
                             fetchPriority={listIndex !== undefined && listIndex < 2 ? "high" : "auto"}
-                            onLoad={recalc}
+                            onLoad={handleImageLoad}
                             onMouseEnter={() => { if (!isMobile) setImgHovered(true); }}
                             onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
                             style={{
-                                display: "block", maxWidth: "78%", maxHeight: isHorizontal ? `${zoneH * 0.78}px` : `${zoneH * 0.92}px`,
-                                width: "auto", height: "auto", borderRadius: "4px", alignSelf: "center", flexShrink: 0,
+                                display: "block",
+                                maxWidth: isMobile ? "100%" : "78%",
+                                maxHeight: equalAreaImageSize ? `${zoneH * 0.92}px` : isHorizontal ? `${zoneH * 0.78}px` : `${zoneH * 0.92}px`,
+                                width: equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
+                                height: "auto",
+                                borderRadius: "4px", alignSelf: "center", flexShrink: 0,
                                 boxShadow: imgHovered && !isMobile ? "4px 16px 40px rgba(28,25,22,0.58), 0 4px 12px rgba(28,25,22,0.35)" : "2px 10px 28px rgba(28,25,22,0.48), 0 3px 8px rgba(28,25,22,0.25)",
                                 transition: "box-shadow 0.2s ease-out, transform 0.2s ease-out", cursor: "pointer",
                                 WebkitTouchCallout: "none", userSelect: "none", WebkitUserSelect: "none", pointerEvents: "auto",
@@ -162,7 +189,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
             </Link>
 
             {(gridMode !== "3" || !isMobile) && (
-                <div style={{
+                <div className="art-card-info" style={{
                     position: "relative", zIndex: 5,
                     marginTop: measuredImgH > 0 ? `-${emptyBottom + measuredImgH + 4}px` : `-${emptyBottom - (isMobile ? 10 : 8)}px`,
                     marginLeft: `${textPad - 4}px`, marginRight: `${textPad - 4}px`,
@@ -173,18 +200,20 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                     borderTop: "1px solid rgba(255,255,255,0.75)", borderLeft: "1px solid rgba(255,255,255,0.55)",
                     borderRight: "1px solid rgba(200,200,205,0.38)", borderBottom: "1px solid rgba(180,180,190,0.3)",
                     borderRadius: "4px", boxShadow: "0 4px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.6) inset",
-                    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.3rem",
+                    display: "block",
+                    userSelect: "text", WebkitUserSelect: "text",
                 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.05rem", flex: 1, minWidth: 0, pointerEvents: "auto" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.05rem", minWidth: 0, pointerEvents: "auto", userSelect: "text", WebkitUserSelect: "text" }}>
                         <p style={{
                             fontFamily: "var(--font-sans)", fontSize: gridMode === "1" ? "0.90rem" : gridMode === "2" ? "0.85rem" : "0.78rem",
                             fontWeight: 400, fontStyle: "italic", letterSpacing: "0.01em", color: "#333", margin: 0,
-                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+                            paddingRight: gridMode === "3" ? "24px" : gridMode === "2" ? "28px" : "32px",
                         }}>
                             {product.title}
                         </p>
 
-                        <p style={{ fontFamily: "var(--font-sans)", fontSize: gridMode === "1" ? "0.68rem" : gridMode === "2" ? "0.64rem" : "0.60rem", fontWeight: 400, color: "#777", lineHeight: 1.2, margin: 0 }}>
+                        <p style={{ fontFamily: "var(--font-sans)", fontSize: gridMode === "1" ? "0.68rem" : gridMode === "2" ? "0.64rem" : "0.60rem", fontWeight: 400, color: "#777", lineHeight: 1.2, margin: 0, paddingRight: gridMode === "3" ? "24px" : gridMode === "2" ? "28px" : "32px" }}>
                             {sizeStr}
                         </p>
                         {st && (
@@ -224,7 +253,11 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                         onPointerDown={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}
                         aria-label={liked ? "Unlike artwork" : "Like artwork"}
                         style={{
-                            background: "none", border: "none", cursor: "pointer", padding: "6px", marginTop: "-2px", flexShrink: 0,
+                            position: "absolute",
+                            top: measuredImgH > 0 ? `${measuredImgH + (isMobile ? 10 : 8) + 2}px` : "2px",
+                            right: "2px",
+                            zIndex: 2,
+                            background: "none", border: "none", cursor: "pointer", padding: "6px", margin: 0,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             transform: likeAnimating ? "scale(1.35)" : "scale(1)", transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
                             outline: "none", pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent",

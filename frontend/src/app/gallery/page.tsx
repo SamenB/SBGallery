@@ -20,6 +20,7 @@ import { Artwork, SortKey } from "./types";
 import { DEFAULT_GRADIENTS, SORT_OPTIONS, IMAGE_ZONE } from "./constants";
 import { sortWorks } from "./utils";
 import { ArtCard } from "./components/ArtCard";
+import { getProductAspectRatio } from "@/app/shop/utils";
 
 /**
  * Main Gallery exhibition page.
@@ -33,10 +34,12 @@ export default function GalleryPage() {
     const [sortKey, setSortKey] = useState<SortKey>("default");
     const [groupBy, setGroupBy] = useState<"collection" | "year" | "medium">("collection");
     const [lightbox, setLightbox] = useState<{ works: Artwork[]; index: number } | null>(null);
-    const [cols, setCols] = useState(3);
     const [gridMode, setGridMode] = useState<"1" | "2" | "3">("2");
     const [gridLoaded, setGridLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [isPhone, setIsPhone] = useState(false);
+    const [naturalAspectRatios, setNaturalAspectRatios] = useState<Record<number, number>>({});
+    const [artworkContainerWidths, setArtworkContainerWidths] = useState<Record<number, number>>({});
 
     const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
     const [visibleCount, setVisibleCount] = useState(12);
@@ -89,7 +92,10 @@ export default function GalleryPage() {
 
     // Initialize layout state based on device capability.
     useEffect(() => {
-        const update = () => setIsMobile(window.innerWidth < 1024);
+        const update = () => {
+            setIsMobile(window.innerWidth < 1024);
+            setIsPhone(window.innerWidth < 768);
+        };
         update();
         window.addEventListener("resize", update);
         return () => window.removeEventListener("resize", update);
@@ -201,12 +207,30 @@ export default function GalleryPage() {
     useEffect(() => {
         const update = () => {
             const w = window.innerWidth;
-            setIsMobile(w < 768);
-            setCols(w < 480 ? 1 : w < 768 ? 2 : w < 1100 ? 3 : 4);
+            setIsMobile(w < 1024);
+            setIsPhone(w < 768);
         };
         update();
         window.addEventListener("resize", update);
         return () => window.removeEventListener("resize", update);
+    }, []);
+
+    const handleNaturalAspectRatio = useCallback((id: number, ratio: number) => {
+        setNaturalAspectRatios(prev => {
+            if (prev[id] === ratio) {
+                return prev;
+            }
+            return { ...prev, [id]: ratio };
+        });
+    }, []);
+
+    const handleContainerWidthChange = useCallback((id: number, width: number) => {
+        setArtworkContainerWidths(prev => {
+            if (prev[id] === width) {
+                return prev;
+            }
+            return { ...prev, [id]: width };
+        });
     }, []);
 
     /** 
@@ -253,16 +277,27 @@ export default function GalleryPage() {
         }
     }, [inView, allArtworks.length, visibleCount, itemsPerPage]);
 
+    /** Numeric grid column mapping shared with Shop for row-aware artwork sizing. */
+    const getColumnCount = () => {
+        if (isMobile) {
+            if (isPhone) {
+                if (gridMode === "1") return 1;
+                if (gridMode === "2") return 2;
+                return 3;
+            }
+            if (gridMode === "1") return 2;
+            if (gridMode === "2") return 3;
+            return 4;
+        }
+        if (gridMode === "1") return 2;
+        if (gridMode === "2") return 3;
+        return 4;
+    };
+
     /** Returns dynamic CSS column definitions based on current grid intensity. */
     const getColumns = () => {
-        if (isMobile) {
-            if (gridMode === "1") return "1fr";
-            if (gridMode === "2") return "repeat(2, 1fr)";
-            if (gridMode === "3") return "repeat(3, 1fr)";
-        }
-        if (gridMode === "1") return "repeat(auto-fill, minmax(460px, 1fr))";
-        if (gridMode === "2") return "repeat(auto-fill, minmax(340px, 1fr))";
-        return "repeat(auto-fill, minmax(220px, 1fr))";
+        const columnCount = getColumnCount();
+        return columnCount === 1 ? "1fr" : `repeat(${columnCount}, 1fr)`;
     };
 
     /** Returns dynamic CSS gap spacing based on current grid intensity and device. */
@@ -276,6 +311,29 @@ export default function GalleryPage() {
         if (gridMode === "2") return "3rem 16px";
         return "2rem 10px";
     };
+
+    const columnCount = getColumnCount();
+    const getRowAspectRatioRange = useCallback((works: Artwork[], index: number) => {
+        const rowStart = Math.floor(index / columnCount) * columnCount;
+        const rowWorks = works.slice(rowStart, rowStart + columnCount);
+        const ratios = rowWorks
+            .map(work => getProductAspectRatio(work, naturalAspectRatios[work.id]))
+            .filter((ratio): ratio is number => ratio !== null);
+
+        if (ratios.length === 0) {
+            return undefined;
+        }
+
+        const rowContainerWidths = rowWorks
+            .map(work => artworkContainerWidths[work.id])
+            .filter((width): width is number => Boolean(width));
+
+        return {
+            min: Math.min(...ratios),
+            max: Math.max(...ratios),
+            containerWidth: rowContainerWidths.length > 0 ? Math.min(...rowContainerWidths) : undefined,
+        };
+    }, [artworkContainerWidths, columnCount, naturalAspectRatios]);
 
     const effectiveLikedIds = user ? likedIds : new Set(pendingLikes);
 
@@ -476,6 +534,9 @@ export default function GalleryPage() {
                                                     gridMode={gridMode}
                                                     isMobile={isMobile}
                                                     liked={effectiveLikedIds.has(work.id)}
+                                                    rowAspectRatioRange={getRowAspectRatioRange(works, i)}
+                                                    onNaturalAspectRatio={handleNaturalAspectRatio}
+                                                    onContainerWidthChange={handleContainerWidthChange}
                                                     onLike={async (id: number, newState: boolean) => {
                                                         try {
                                                             if (newState) {

@@ -22,6 +22,26 @@ export const getLongestSide = (p: Product): number => Math.max(p.width_cm || 0, 
 
 export const getArea = (p: Product) => (p.width_cm || 0) * (p.height_cm || 0);
 
+export interface AspectRatioRange {
+    min: number;
+    max: number;
+    containerWidth?: number;
+}
+
+type ArtworkAspectRatioSource = Pick<Product, "width_cm" | "height_cm" | "width_in" | "height_in">;
+
+export const getProductAspectRatio = (product: ArtworkAspectRatioSource, naturalAspectRatio?: number): number | null => {
+    if (naturalAspectRatio && Number.isFinite(naturalAspectRatio) && naturalAspectRatio > 0) {
+        return naturalAspectRatio;
+    }
+
+    const sourceWidth = product.width_cm || product.width_in || 0;
+    const sourceHeight = product.height_cm || product.height_in || 0;
+    const ratio = sourceWidth > 0 && sourceHeight > 0 ? sourceWidth / sourceHeight : 0;
+
+    return Number.isFinite(ratio) && ratio > 0 ? ratio : null;
+};
+
 export const getEffectiveStartingPrice = (p: Product, fallbackPrintPrice: number): number => {
     return (
         p.original_price ||
@@ -47,6 +67,51 @@ export const getSizeCategory = (p: Product): "small" | "medium" | "large" | null
     if (area <= 3600) return "medium";
     return "large";
 };
+
+export function getEqualAreaImageSize({
+    product,
+    containerWidth,
+    zoneHeight,
+    isMobile,
+    rowAspectRatioRange,
+    naturalAspectRatio,
+    maxWidthRatio = 0.78,
+    maxHeightRatio = 0.92,
+}: {
+    product: ArtworkAspectRatioSource;
+    containerWidth: number;
+    zoneHeight: number;
+    isMobile: boolean;
+    rowAspectRatioRange?: AspectRatioRange;
+    naturalAspectRatio?: number;
+    maxWidthRatio?: number;
+    maxHeightRatio?: number;
+}): { width: number; height: number } | null {
+    const ratio = getProductAspectRatio(product, naturalAspectRatio);
+
+    if (!ratio || containerWidth <= 0 || zoneHeight <= 0) {
+        return null;
+    }
+
+    const rowContainerWidth = rowAspectRatioRange?.containerWidth || containerWidth;
+    const maxWidth = Math.min(containerWidth, rowContainerWidth) * (isMobile ? 1 : maxWidthRatio);
+    const maxHeight = zoneHeight * maxHeightRatio;
+    const minRowRatio = rowAspectRatioRange?.min || ratio;
+    const maxRowRatio = rowAspectRatioRange?.max || ratio;
+    const targetArea = Math.min(
+        (maxWidth * maxWidth) / maxRowRatio,
+        maxHeight * maxHeight * minRowRatio,
+    );
+
+    const rawWidth = Math.sqrt(targetArea * ratio);
+    const rawHeight = Math.sqrt(targetArea / ratio);
+    const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
+
+    return {
+        width: Math.round(rawWidth * scale),
+        height: Math.round(rawHeight * scale),
+    };
+}
 
 export function sortProducts(products: Product[], key: SortKey, globalPrintPrice: number) {
     const c = [...products];

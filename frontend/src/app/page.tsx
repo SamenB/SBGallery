@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { getApiUrl, getImageUrl, artworkUrl } from "@/utils";
-import HomeArtCard from "@/components/HomeArtCard";
+import RecentPaintingsGrid from "@/components/RecentPaintingsGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -373,19 +373,7 @@ export default async function Home() {
             }
           }
         `}</style>
-        <div className="recent-paintings-scroll">
-          {/* Start Spacer for mobile horizontal scrolling behavior. */}
-          <div className="recent-paintings-spacer" aria-hidden="true" />
-
-          {featuredWorks.map((work) => (
-            <div key={work.id} className="recent-paintings-item">
-              <HomeArtCard work={work} zoneH={360} />
-            </div>
-          ))}
-
-          {/* End Spacer for mobile horizontal scrolling behavior. */}
-          <div className="recent-paintings-spacer" aria-hidden="true" />
-        </div>
+        <RecentPaintingsGrid works={featuredWorks} />
         </div>
       </section>
 

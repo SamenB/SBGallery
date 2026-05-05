@@ -366,28 +366,9 @@ h3 {
   }
 
   .art-card-container {
-    height: auto !important;
-    aspect-ratio: auto !important;
     margin-bottom: 0.1rem;
-    /* Tightest possible gap between image and text */
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
-  .art-card-inner {
-    /* Allow it to reach full width natively.
-       82vh: most portrait paintings fill the full container width.
-       55vh was too restrictive — made tall verticals appear finger-thin. */
-    max-width: 100% !important;
-    max-height: 82vh !important;
-  }
-
-  .art-grid {
-    /* Align whole cards by their vertical center in the row */
-    /* This ensures images are on the same axis even if they have different heights */
-    align-items: center !important;
-  }
 }
 
 .art-card-inner {
@@ -422,7 +403,7 @@ h3 {
      when mouse enters actual artwork pixels, not the card box.
      Shadow enhancement is also handled inline. */
 @media (hover: hover) and (pointer: fine) {
-  .art-card:active:not(:has(button:active)) .art-card-inner {
+  .art-card-inner:active {
     transform: scale(0.98);
     box-shadow: 1px 5px 15px rgba(28, 25, 22, 0.80), 0 1px 5px rgba(28, 25, 22, 0.44) !important;
   }
@@ -448,6 +429,13 @@ h3 {
 }
 /* Also suppress on plain <img> focus states */
 img:focus { outline: none; }
+
+.art-card-info,
+.art-card-info p,
+.art-card-info span {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
 
 
 /* ─────────────────────────────────────────────

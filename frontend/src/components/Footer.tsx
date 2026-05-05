@@ -178,6 +178,34 @@ export default function Footer() {
                     color: rgba(255, 255, 255, 0.3);
                 }
 
+                @media (max-width: 768px) {
+                    .footer-bottom {
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 1.25rem;
+                        text-align: center;
+                    }
+
+                    .footer-brand {
+                        display: flex;
+                        justify-content: center;
+                        width: 100%;
+                    }
+
+                    .footer-nav {
+                        justify-content: center;
+                        gap: 0.85rem 1.2rem;
+                        max-width: 320px;
+                    }
+
+                    .footer-copyright {
+                        display: block;
+                        width: 100%;
+                        margin-top: 0.25rem;
+                    }
+                }
+
                 /* Layout for Icons */
                 .features-wrapper {
                     display: flex;
