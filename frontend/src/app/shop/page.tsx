@@ -25,53 +25,6 @@ import { SidebarSection } from "./components/SidebarSection";
 import { DualRangeSlider } from "./components/DualRangeSlider";
 import { PriceRangeSection } from "./components/PriceRangeSection";
 
-type MobileImageSizingItem = {
-    width_cm?: number;
-    height_cm?: number;
-    width_in?: number;
-    height_in?: number;
-    orientation?: string;
-};
-
-const getDisplayAspectRatio = (item: MobileImageSizingItem) => {
-    const width = item.width_cm || item.width_in || 0;
-    const height = item.height_cm || item.height_in || 0;
-    if (width > 0 && height > 0) return width / height;
-    const orientation = (item.orientation || "vertical").toLowerCase();
-    if (orientation === "square") return 1;
-    if (orientation === "horizontal") return 1.45;
-    return 0.72;
-};
-
-const getEqualRowImageAreas = <T extends MobileImageSizingItem>(
-    items: T[],
-    columns: number,
-    columnWidth: number,
-    zoneH: number,
-    maxWidthFactor: number,
-    getMaxHeightFactor: (item: T) => number,
-) => {
-    if (columns <= 0 || columnWidth <= 0 || zoneH <= 0) return [];
-    const areas = new Array<number>(items.length);
-
-    for (let start = 0; start < items.length; start += columns) {
-        const row = items.slice(start, start + columns);
-        const targetArea = Math.min(...row.map(item => {
-            const aspectRatio = getDisplayAspectRatio(item);
-            const maxWidth = columnWidth * maxWidthFactor;
-            const maxHeight = zoneH * getMaxHeightFactor(item);
-            const width = Math.min(maxWidth, maxHeight * aspectRatio);
-            return width * (width / aspectRatio);
-        }));
-
-        row.forEach((_, offset) => {
-            areas[start + offset] = targetArea;
-        });
-    }
-
-    return areas;
-};
-
 /**
  * Main Shop catalog page.
  * Manages complex filtering state, multi-unit dimension handling,
@@ -146,7 +99,6 @@ function ShopPageContent() {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [isPhone, setIsPhone] = useState(false);
-    const [viewportWidth, setViewportWidth] = useState(0);
     const [gridMode, setGridMode] = useState<"1" | "2" | "3">("2");
     const [gridLoaded, setGridLoaded] = useState(false);
 
@@ -238,7 +190,6 @@ function ShopPageContent() {
         const update = () => {
             setIsMobile(window.innerWidth < 1024);
             setIsPhone(window.innerWidth < 768);
-            setViewportWidth(window.innerWidth);
         };
         update();
         window.addEventListener("resize", update);
@@ -432,42 +383,6 @@ function ShopPageContent() {
     const displayed = useMemo(() => {
         return sortProducts(filtered, SORT_OPTIONS[sortIdx].key, globalPrintPrice).slice(0, visibleCount);
     }, [filtered, sortIdx, visibleCount, globalPrintPrice]);
-
-    const mobileColumnCount = useMemo(() => {
-        if (isPhone) {
-            if (gridMode === "1") return 1;
-            if (gridMode === "2") return 2;
-            return 3;
-        }
-        if (gridMode === "1") return 2;
-        if (gridMode === "2") return 3;
-        return 4;
-    }, [gridMode, isPhone]);
-
-    const mobileColumnGapPx = useMemo(() => {
-        if (isPhone) {
-            if (gridMode === "1") return 16;
-            if (gridMode === "2") return 20;
-            return 8;
-        }
-        if (gridMode === "1") return 24;
-        if (gridMode === "2") return 16;
-        return 8;
-    }, [gridMode, isPhone]);
-
-    const mobileImageAreas = useMemo(() => {
-        if (!isMobile || viewportWidth <= 0) return [];
-        const gridWidth = Math.max(0, viewportWidth - 32);
-        const columnWidth = (gridWidth - mobileColumnGapPx * (mobileColumnCount - 1)) / mobileColumnCount;
-        return getEqualRowImageAreas(
-            displayed,
-            mobileColumnCount,
-            columnWidth,
-            IMAGE_ZONE[gridMode] || 380,
-            0.78,
-            item => ((item.orientation || "").toLowerCase() === "horizontal" ? 0.78 : 0.92),
-        );
-    }, [displayed, gridMode, isMobile, mobileColumnCount, mobileColumnGapPx, viewportWidth]);
 
     /** Calculate the total number of active filters to show count badges on mobile. */
     const widthActive = widthMin > wGlobalMin || widthMax < wGlobalMax;
@@ -739,7 +654,6 @@ function ShopPageContent() {
                                 listIndex={i}
                                 onAuthRequired={!user ? handleAuthRequired : undefined}
                                 onLikeChange={handleLikeChange}
-                                mobileImageArea={mobileImageAreas[i]}
                             />)}
                         </div>
                     ) : (

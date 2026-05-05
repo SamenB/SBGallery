@@ -102,7 +102,6 @@ class ArtworkAddRequest(BaseModel):
     )
     show_in_gallery: bool = Field(True, description="Artwork appears in the public gallery")
     show_in_shop: bool = Field(True, description="Artwork can appear in the public shop")
-    shop_sort_order: int | None = Field(None, description="Manual shop display order")
 
 
 class ArtworkAdd(BaseModel):
@@ -137,7 +136,6 @@ class ArtworkAdd(BaseModel):
     print_workflow_config: dict[str, Any] | None = Field(None)
     show_in_gallery: bool = Field(True)
     show_in_shop: bool = Field(True)
-    shop_sort_order: int = Field(0)
 
     # Print availability flags
     has_original: bool = Field(False)
@@ -247,7 +245,6 @@ class ArtworkPatchRequest(BaseModel):
     )
     show_in_gallery: bool | None = Field(None)
     show_in_shop: bool | None = Field(None)
-    shop_sort_order: int | None = Field(None)
 
 
 class ArtworkPatch(BaseModel):
@@ -278,7 +275,6 @@ class ArtworkPatch(BaseModel):
     print_workflow_config: dict[str, Any] | None = Field(None)
     show_in_gallery: bool | None = Field(None)
     show_in_shop: bool | None = Field(None)
-    shop_sort_order: int | None = Field(None)
 
     # Print availability flags
     has_original: bool | None = Field(None)
@@ -294,10 +290,6 @@ class ArtworkPatch(BaseModel):
 
     # Print configuration
     print_aspect_ratio_id: int | None = Field(None)
-
-
-class ArtworkShopOrderUpdate(BaseModel):
-    artwork_ids: list[int] = Field(..., min_length=1)
 
 
 class ArtworkAddBulk(BaseModel):
@@ -316,7 +308,6 @@ class ArtworkAddBulk(BaseModel):
     print_quality_url: str | None = Field(None)
     show_in_gallery: bool = Field(True)
     show_in_shop: bool = Field(True)
-    shop_sort_order: int = Field(0)
 
     # Print availability flags
     has_original: bool = Field(False)

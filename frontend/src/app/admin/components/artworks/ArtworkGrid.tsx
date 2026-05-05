@@ -5,8 +5,6 @@ import { resolveImageUrl } from "./utils";
 interface ArtworkGridProps {
     artworks: Artwork[];
     readinessRefreshing?: boolean;
-    isMoveMode?: boolean;
-    moveArtworkCard?: (draggedArtworkId: number, targetArtworkId: number) => void;
     handleEditClick: (artwork: Artwork) => void;
     handleDelete: (artworkId: number) => void;
 }
@@ -14,8 +12,6 @@ interface ArtworkGridProps {
 export function ArtworkGrid({
     artworks,
     readinessRefreshing = false,
-    isMoveMode = false,
-    moveArtworkCard,
     handleEditClick,
     handleDelete,
 }: ArtworkGridProps) {
@@ -26,45 +22,15 @@ export function ArtworkGrid({
                 return (
                     <div
                         key={artwork.id}
-                        draggable={isMoveMode}
-                        onDragStart={(event) => {
-                            if (!isMoveMode) {
-                                return;
-                            }
-                            event.dataTransfer.setData("text/plain", String(artwork.id));
-                            event.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragOver={(event) => {
-                            if (!isMoveMode) {
-                                return;
-                            }
-                            event.preventDefault();
-                            event.dataTransfer.dropEffect = "move";
-                        }}
-                        onDrop={(event) => {
-                            if (!isMoveMode || !moveArtworkCard) {
-                                return;
-                            }
-                            event.preventDefault();
-                            const draggedArtworkId = Number(event.dataTransfer.getData("text/plain"));
-                            if (Number.isFinite(draggedArtworkId)) {
-                                moveArtworkCard(draggedArtworkId, artwork.id);
-                            }
-                        }}
                         className={`rounded-[24px] overflow-hidden border bg-white shadow-sm ${
                             readiness?.status === "blocked"
                                 ? "border-rose-200"
                                 : readiness?.status === "attention"
                                 ? "border-amber-200"
                                 : "border-[#31323E]/10"
-                        } ${isMoveMode ? "cursor-grab transition-transform hover:-translate-y-1 hover:shadow-lg active:cursor-grabbing" : ""}`}
+                        }`}
                     >
                         <div className="aspect-[4/5] bg-[#31323E]/5 relative overflow-hidden">
-                            {isMoveMode ? (
-                                <div className="absolute left-3 top-3 z-20 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#31323E] shadow-sm">
-                                    Move
-                                </div>
-                            ) : null}
                             {artwork.images && artwork.images.length > 0 ? (
                                 <img
                                     src={resolveImageUrl(artwork.images[0], "medium")}
@@ -76,7 +42,6 @@ export function ArtworkGrid({
                                     No image
                                 </div>
                             )}
-                            {!isMoveMode ? (
                             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/50 to-transparent flex gap-2">
                                 <button
                                     type="button"
@@ -93,7 +58,6 @@ export function ArtworkGrid({
                                     Delete
                                 </button>
                             </div>
-                            ) : null}
                         </div>
 
                         <div className="px-4 py-4 space-y-3">
@@ -137,7 +101,7 @@ export function ArtworkGrid({
                                 ) : null}
                                 {artwork.show_in_shop ? (
                                     <span className="rounded-full bg-[#31323E]/6 px-2.5 py-1">
-                                        Shop #{artwork.shop_sort_order ?? "-"}
+                                        Shop
                                     </span>
                                 ) : null}
                                 {artwork.has_paper_print || artwork.has_paper_print_limited ? (
