@@ -6,7 +6,7 @@ import enum
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from src.schemas.labels import Label
 from src.schemas.print_pricing import AspectRatioItem
@@ -153,12 +153,6 @@ class ArtworkAdd(BaseModel):
 
     # Print configuration
     print_aspect_ratio_id: int | None = Field(None)
-
-    @field_validator("shop_sort_order", mode="before")
-    @classmethod
-    def default_missing_shop_sort_order(cls, value: int | None) -> int:
-        """SQLAlchemy defaults are not populated on transient ORM instances."""
-        return 0 if value is None else value
 
 
 class Artwork(ArtworkAdd):
