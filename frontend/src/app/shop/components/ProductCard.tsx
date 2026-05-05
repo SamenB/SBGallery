@@ -6,7 +6,7 @@ import { usePreferences } from "@/context/PreferencesContext";
 import { getApiUrl, getImageUrl } from "@/utils";
 import { Product } from "../types";
 import { STATUS } from "../constants";
-import { buildArtworkHref, getEqualAreaImageSize, getStorefrontSummary } from "../utils";
+import { buildArtworkHref, getEqualAreaImageSize, getProductAspectRatio, getStorefrontSummary } from "../utils";
 import type { AspectRatioRange } from "../utils";
 
 export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: {
@@ -56,6 +56,13 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
         () => getEqualAreaImageSize({ product, containerWidth, zoneHeight: zoneH, isMobile, rowAspectRatioRange, naturalAspectRatio }),
         [containerWidth, isMobile, naturalAspectRatio, product, rowAspectRatioRange, zoneH],
     );
+    const artworkRatio = getProductAspectRatio(product, naturalAspectRatio);
+    const stageHeight = useMemo(() => {
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioRange?.min) return zoneH;
+        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioRange.min);
+        const stagePadding = isMobile ? (gridMode === "3" ? 6 : 10) : 14;
+        return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
+    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioRange?.min, zoneH]);
 
     const recalc = useCallback(() => {
         const c = containerRef.current;
@@ -84,7 +91,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
 
     useEffect(() => {
         requestAnimationFrame(recalc);
-    }, [zoneH, equalAreaImageSize, recalc]);
+    }, [stageHeight, zoneH, equalAreaImageSize, recalc]);
 
     const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
         const image = event.currentTarget;
@@ -140,7 +147,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
             className={`art-card magnetic-scroll${listIndex !== undefined && listIndex < 2 ? " no-scroll-anim" : ""}`}
             style={{
                 display: "flex", flexDirection: "column", width: "100%", padding: 0,
-                transform: imgHovered && !isMobile ? "scale(1.03)" : "scale(1)",
+                transform: imgHovered && !isMobile ? "scale(1.03)" : undefined,
                 transformOrigin: "center center",
                 transition: "transform 0.2s ease-out",
                 WebkitTapHighlightColor: "transparent",
@@ -151,7 +158,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                     ref={containerRef}
                     className="art-card-container"
                     style={{
-                        width: "100%", height: `${zoneH}px`, display: "flex", alignItems: "center", justifyContent: "center",
+                        width: "100%", height: `${stageHeight}px`, display: "flex", alignItems: "center", justifyContent: "center",
                         flexShrink: 0, position: "relative", pointerEvents: "none",
                     }}
                 >

@@ -474,19 +474,19 @@ function ShopPageContent() {
     const getGap = () => {
         if (isMobile) {
             if (isPhone) {
-                if (gridMode === "1") return "2.25rem 1rem";
-                if (gridMode === "2") return "1.5rem 1.25rem";
-                return "0.5rem 0.5rem";
+                if (gridMode === "1") return "1.35rem 1rem";
+                if (gridMode === "2") return "0.9rem 1.25rem";
+                return "0.4rem 0.5rem";
             } else {
                 // Tablet gap
-                if (gridMode === "1") return "3rem 1.5rem";
-                if (gridMode === "2") return "2rem 1rem";
-                return "1rem 0.5rem";
+                if (gridMode === "1") return "1.8rem 1.5rem";
+                if (gridMode === "2") return "1.2rem 1rem";
+                return "0.65rem 0.5rem";
             }
         }
-        if (gridMode === "1") return "4rem 24px";
-        if (gridMode === "2") return "3rem 16px";
-        return "2rem 10px";
+        if (gridMode === "1") return "2.4rem 24px";
+        if (gridMode === "2") return "1.8rem 16px";
+        return "1.2rem 10px";
     };
 
     const columnCount = getColumnCount();
@@ -658,7 +658,7 @@ function ShopPageContent() {
 
                 <div style={{ flex: 1, minWidth: 0, padding: isMobile ? "1rem 0.75rem 6rem 0.75rem" : "1rem 2.5rem 6rem 2rem" }}>
                     {/* Catalog Control Bar: Status counter and sort/grid density toggles. */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem", flexWrap: isMobile ? "nowrap" : "wrap", gap: isMobile ? "0.75rem" : "1rem", overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? "5px" : 0, scrollbarWidth: "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", flexWrap: isMobile ? "nowrap" : "wrap", gap: isMobile ? "0.75rem" : "1rem", overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? "5px" : 0, scrollbarWidth: "none" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem", flexShrink: 0 }}>
                             <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.75rem", fontWeight: 300, color: "var(--color-muted)", whiteSpace: "nowrap" }}>{filtered.length} works</span>
                             {isMobile && (

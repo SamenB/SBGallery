@@ -303,13 +303,13 @@ export default function GalleryPage() {
     /** Returns dynamic CSS gap spacing based on current grid intensity and device. */
     const getGap = () => {
         if (isMobile) {
-            if (gridMode === "1") return "3.2rem 1rem";
-            if (gridMode === "2") return "1.5rem 1.25rem";
-            if (gridMode === "3") return "0.5rem 0.5rem";
+            if (gridMode === "1") return "1rem 1rem";
+            if (gridMode === "2") return "0.5rem 1.25rem";
+            if (gridMode === "3") return "0.25rem 0.5rem";
         }
-        if (gridMode === "1") return "4rem 24px";
-        if (gridMode === "2") return "3rem 16px";
-        return "2rem 10px";
+        if (gridMode === "1") return "1.25rem 24px";
+        if (gridMode === "2") return "0.9rem 16px";
+        return "0.65rem 10px";
     };
 
     const columnCount = getColumnCount();
@@ -474,9 +474,9 @@ export default function GalleryPage() {
             <div style={{ display: "flex", flexDirection: "column" }}>
                 {sorted.map(({ name, id, works, totalInGroup }, idx) => {
                     return (
-                        <section key={name} style={{ paddingBottom: "1.25rem", marginBottom: 0 }}>
+                        <section key={name} style={{ paddingBottom: "0.5rem", marginBottom: 0 }}>
                             {/* Visual hierarchy header: Full-width ribbon styled collection title. */}
-                            <div style={{ width: "100%", margin: isMobile ? "0 0 0.5rem 0" : "0 0 1rem 0" }}>
+                            <div style={{ width: "100%", margin: isMobile ? "0 0 0.6rem 0" : "0 0 0.75rem 0" }}>
                                 <div
                                     style={{
                                         maxWidth: "1600px", margin: "0 auto",
@@ -509,7 +509,7 @@ export default function GalleryPage() {
                             </div>
 
                             <div style={{ display: "block" }}>
-                                <div style={{ overflow: "hidden", padding: "20px 0 20px 0", margin: "-15px 0 0 0" }}>
+                                <div style={{ overflow: "hidden", padding: "16px 0 18px 0", margin: "-8px 0 0 0" }}>
                                     <div className="magnetic-scroll" style={{
                                         width: "100%",
                                         padding: isMobile ? "0 0.75rem 1rem" : "0 0 0.5rem",

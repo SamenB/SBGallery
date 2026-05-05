@@ -5,7 +5,7 @@ import { usePreferences } from "@/context/PreferencesContext";
 import { getImageUrl } from "@/utils";
 import { Artwork } from "../types";
 import { STATUS } from "../constants";
-import { getEqualAreaImageSize } from "@/app/shop/utils";
+import { getEqualAreaImageSize, getProductAspectRatio } from "@/app/shop/utils";
 import type { AspectRatioRange } from "@/app/shop/utils";
 
 interface ArtCardProps {
@@ -56,6 +56,13 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
         }),
         [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, work, zoneH],
     );
+    const artworkRatio = getProductAspectRatio(work, naturalAspectRatio);
+    const stageHeight = useMemo(() => {
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioRange?.min) return zoneH;
+        const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioRange.min);
+        const stagePadding = isMobile ? (gridMode === "3" ? 4 : 8) : 10;
+        return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
+    }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioRange?.min, zoneH]);
 
     // Sync on parent prop change (e.g., after DB load)
     useEffect(() => { setLiked(initialLiked || false); }, [initialLiked]);
@@ -103,7 +110,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
     // Recalculate whenever the viewing zone height changes (e.g., density toggle).
     useEffect(() => {
         requestAnimationFrame(recalc);
-    }, [zoneH, equalAreaImageSize, recalc]);
+    }, [stageHeight, zoneH, equalAreaImageSize, recalc]);
 
     const handleImageLoad = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
         const image = event.currentTarget;
@@ -128,7 +135,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                 background: "none", border: "none", margin: 0,
                 textAlign: "left", pointerEvents: "auto", padding: 0,
                 /* Unified scale: image + text move as one glass plate */
-                transform: imgHovered && !isMobile ? "scale(1.03)" : "scale(1)",
+                transform: imgHovered && !isMobile ? "scale(1.03)" : undefined,
                 transformOrigin: "center center",
                 transition: "transform 0.2s ease-out",
                 WebkitTapHighlightColor: "transparent",
@@ -140,7 +147,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                 style={{
                     position: "relative",
                     width: "100%",
-                    height: `${zoneH}px`,
+                    height: `${stageHeight}px`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
