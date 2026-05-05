@@ -14,7 +14,12 @@ from fastapi.concurrency import run_in_threadpool
 from src.api.dependencies import AdminDep, DBDep
 from src.exeptions import ObjectNotFoundException
 from src.print_on_demand import get_print_provider
-from src.schemas.artworks import ArtworkAddBulk, ArtworkAddRequest, ArtworkPatchRequest
+from src.schemas.artworks import (
+    ArtworkAddBulk,
+    ArtworkAddRequest,
+    ArtworkPatchRequest,
+    ArtworkShopOrderUpdate,
+)
 from src.services.artwork_print_workflow import ArtworkPrintWorkflowService
 from src.services.artworks import ArtworkService
 from src.tasks.tasks import process_and_attach_image
@@ -208,6 +213,16 @@ async def patch_artwork(
     Partially updates an artwork record by its ID. Requires admin privileges.
     """
     await ArtworkService(db).update_artwork_partially(artwork_id, artwork_data)
+    return {"status": "OK"}
+
+
+@router.patch("/admin/shop-order")
+async def update_shop_order(
+    admin_id: AdminDep,
+    db: DBDep,
+    payload: ArtworkShopOrderUpdate = Body(),
+):
+    await ArtworkService(db).update_shop_order(payload.artwork_ids)
     return {"status": "OK"}
 
 

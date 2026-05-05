@@ -162,6 +162,7 @@ export interface Artwork {
     print_readiness_summary?: PrintReadinessSummary | null;
     show_in_gallery?: boolean;
     show_in_shop?: boolean;
+    shop_sort_order?: number;
     labels?: { id: number; title: string; category_id?: number }[];
 }
 

@@ -178,6 +178,40 @@ export default function Footer() {
                     color: rgba(255, 255, 255, 0.3);
                 }
 
+                @media (max-width: 768px) {
+                    .footer-bottom {
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 1.35rem;
+                        text-align: center;
+                    }
+
+                    .footer-brand {
+                        display: flex;
+                        justify-content: center;
+                        width: 100%;
+                        padding-bottom: 0;
+                    }
+
+                    .footer-brand img {
+                        height: 34px;
+                        max-width: min(78vw, 280px);
+                    }
+
+                    .footer-nav {
+                        justify-content: center;
+                        gap: 0.85rem 1.15rem;
+                        max-width: 320px;
+                        margin: 0 auto;
+                    }
+
+                    .footer-copyright {
+                        flex-basis: 100%;
+                        margin-top: 0.15rem;
+                    }
+                }
+
                 /* Layout for Icons */
                 .features-wrapper {
                     display: flex;

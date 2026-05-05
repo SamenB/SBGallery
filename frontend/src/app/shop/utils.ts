@@ -51,6 +51,7 @@ export const getSizeCategory = (p: Product): "small" | "medium" | "large" | null
 export function sortProducts(products: Product[], key: SortKey, globalPrintPrice: number) {
     const c = [...products];
     switch (key) {
+        case "curated": break;
         case "newest": c.sort((a, b) => b.id - a.id); break;
         case "price-low": c.sort((a, b) => getEffectiveStartingPrice(a, globalPrintPrice) - getEffectiveStartingPrice(b, globalPrintPrice)); break;
         case "price-high": c.sort((a, b) => getEffectiveStartingPrice(b, globalPrintPrice) - getEffectiveStartingPrice(a, globalPrintPrice)); break;

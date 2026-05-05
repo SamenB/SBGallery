@@ -6,6 +6,7 @@ export const DEFAULT_GRADIENTS = [
 ];
 
 export const SORT_OPTIONS: { label: string; key: SortKey }[] = [
+    { label: "Curated", key: "curated" },
     { label: "Newest", key: "newest" },
     { label: "Price ↑", key: "price-low" },
     { label: "Price ↓", key: "price-high" },

@@ -56,13 +56,15 @@ export default function ArtworksTab() {
     const [payloadRefreshLoading, setPayloadRefreshLoading] = useState(false);
     const [payloadRefreshMessage, setPayloadRefreshMessage] = useState<string | null>(null);
     const [payloadRefreshError, setPayloadRefreshError] = useState<string | null>(null);
+    const [isMoveMode, setIsMoveMode] = useState(false);
+    const [savingShopOrder, setSavingShopOrder] = useState(false);
     const [formData, setFormData] = useState<ArtworkFormState>(createDefaultFormState());
 
     const refreshReadinessSummaries = useCallback(async () => {
         setReadinessRefreshing(true);
         try {
             const response = await apiFetch(
-                `${getApiUrl()}/artworks/admin/list?limit=200&include_print_readiness=true`
+                `${getApiUrl()}/artworks/admin/list?limit=1000&include_print_readiness=true`
             );
             if (!response.ok) {
                 throw new Error(`Readiness request failed with ${response.status}`);
@@ -95,7 +97,7 @@ export default function ArtworksTab() {
         setLoading(true);
         try {
             const [artworksRes, categoriesRes, labelsRes, ratiosRes] = await Promise.all([
-                apiFetch(`${getApiUrl()}/artworks/admin/list?limit=200`),
+                apiFetch(`${getApiUrl()}/artworks/admin/list?limit=1000`),
                 apiFetch(`${getApiUrl()}/labels/categories`),
                 apiFetch(`${getApiUrl()}/labels`),
                 apiFetch(`${getApiUrl()}/print-pricing/aspect-ratios`),
@@ -497,6 +499,45 @@ export default function ArtworksTab() {
         await fetchData();
     };
 
+    const moveArtworkCard = (draggedArtworkId: number, targetArtworkId: number) => {
+        if (draggedArtworkId === targetArtworkId) {
+            return;
+        }
+        setArtworks((previous) => {
+            const fromIndex = previous.findIndex((artwork) => artwork.id === draggedArtworkId);
+            const toIndex = previous.findIndex((artwork) => artwork.id === targetArtworkId);
+            if (fromIndex < 0 || toIndex < 0) {
+                return previous;
+            }
+            const next = [...previous];
+            const [moved] = next.splice(fromIndex, 1);
+            next.splice(toIndex, 0, moved);
+            return next;
+        });
+    };
+
+    const saveShopOrder = async () => {
+        setSavingShopOrder(true);
+        setPayloadRefreshError(null);
+        setPayloadRefreshMessage(null);
+        try {
+            const response = await apiFetch(`${getApiUrl()}/artworks/admin/shop-order`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ artwork_ids: artworks.map((artwork) => artwork.id) }),
+            });
+            await apiJson(response);
+            setPayloadRefreshMessage("Shop order saved.");
+            setIsMoveMode(false);
+            await fetchData();
+        } catch (error) {
+            console.error(error);
+            setPayloadRefreshError(error instanceof Error ? error.message : "Could not save shop order.");
+        } finally {
+            setSavingShopOrder(false);
+        }
+    };
+
     const headerReadiness = hasPrintOfferings(formData)
         ? hasMissingPrintRatio(formData)
             ? { status: "blocked", message: "Choose a print aspect ratio in Basics." }
@@ -529,6 +570,27 @@ export default function ArtworksTab() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsMoveMode((previous) => !previous)}
+                        className={`px-5 py-2.5 rounded-xl border text-sm font-bold uppercase tracking-[0.14em] ${
+                            isMoveMode
+                                ? "border-[#31323E] bg-[#31323E] text-white"
+                                : "border-[#31323E]/15 bg-white text-[#31323E]"
+                        }`}
+                    >
+                        {isMoveMode ? "Done Moving" : "Move"}
+                    </button>
+                    {isMoveMode ? (
+                        <button
+                            type="button"
+                            onClick={() => void saveShopOrder()}
+                            disabled={savingShopOrder}
+                            className="px-5 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold uppercase tracking-[0.14em] disabled:opacity-50"
+                        >
+                            {savingShopOrder ? "Saving..." : "Save Order"}
+                        </button>
+                    ) : null}
                     <button
                         type="button"
                         onClick={() => void refreshArtworkPayloads()}
@@ -694,6 +756,8 @@ export default function ArtworksTab() {
             <ArtworkGrid
                 artworks={artworks}
                 readinessRefreshing={readinessRefreshing}
+                isMoveMode={isMoveMode}
+                moveArtworkCard={moveArtworkCard}
                 handleEditClick={handleEditClick}
                 handleDelete={handleDelete}
             />

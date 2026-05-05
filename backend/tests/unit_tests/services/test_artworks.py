@@ -11,6 +11,7 @@ class MockDBManager:
     def __init__(self):
         self.artworks = AsyncMock()
         self.artworks.get_one_or_none.return_value = None
+        self.artworks.get_next_shop_sort_order.return_value = 100
         self.artwork_print_assets = AsyncMock()
         self.artwork_print_assets.get_file_urls_for_artwork.return_value = []
         self.artwork_labels = AsyncMock()
@@ -55,6 +56,8 @@ async def test_create_artwork(artwork_service):
 
     assert result.id == 5
     artwork_service.db.artworks.add.assert_awaited_once()
+    added_payload = artwork_service.db.artworks.add.await_args.args[0]
+    assert added_payload.shop_sort_order == 100
     artwork_service.db.artwork_labels.add_bulk.assert_awaited_once()  # two labels
     artwork_service.db.commit.assert_awaited_once()
 
@@ -116,3 +119,14 @@ async def test_patch_images_removes_files_no_longer_referenced(
     assert kept_file.exists()
     artwork_service.db.artworks.edit.assert_awaited_once()
     artwork_service.db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_shop_order_deduplicates_and_commits(artwork_service):
+    artwork_service._refresh_materialized_storefront = AsyncMock()
+
+    await artwork_service.update_shop_order([3, 2, 3, 1])
+
+    artwork_service.db.artworks.update_shop_sort_order.assert_awaited_once_with([3, 2, 1])
+    artwork_service.db.commit.assert_awaited_once()
+    artwork_service._refresh_materialized_storefront.assert_awaited_once_with([3, 2, 1])

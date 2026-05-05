@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import type { CSSProperties } from "react";
 import { usePreferences } from "@/context/PreferencesContext";
 import { getImageUrl } from "@/utils";
 import { Artwork } from "../types";
@@ -15,17 +16,26 @@ interface ArtCardProps {
     liked?: boolean;
     onLike?: (id: number, newState: boolean) => void;
     onAuthRequired?: (id: number, newState: boolean) => void;
+    mobileImageArea?: number;
 }
 
 /**
  * Individual gallery card component.
  * Dynamically calculates padding and positioning to anchor title boxes strictly to image edges.
  */
-export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired }: ArtCardProps) {
+export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired, mobileImageArea }: ArtCardProps) {
     const { units } = usePreferences();
     const ori = (work.orientation || "vertical").toLowerCase();
     const isHorizontal = ori === "horizontal";
     const isSquare = ori === "square";
+    const aspectRatio = useMemo(() => {
+        const width = work.width_cm || work.width_in || 0;
+        const height = work.height_cm || work.height_in || 0;
+        if (width > 0 && height > 0) return width / height;
+        if (isSquare) return 1;
+        if (isHorizontal) return 1.45;
+        return 0.72;
+    }, [isHorizontal, isSquare, work.height_cm, work.height_in, work.width_cm, work.width_in]);
     const imgSrc = work.images?.[0] ? getImageUrl(work.images[0], "medium") || "" : "";
     const st = STATUS[work.original_status];
 
@@ -34,9 +44,24 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
     const [emptyBottom, setEmptyBottom] = useState(0);
     const [measuredImgH, setMeasuredImgH] = useState(0); // Track exact image height safely
     const [measuredImgW, setMeasuredImgW] = useState(0); // Track exact image width safely
+    const recalcFrame = useRef<number | null>(null);
     const [imgHovered, setImgHovered] = useState(false);
     const [liked, setLiked] = useState(initialLiked || false);
     const [likeAnimating, setLikeAnimating] = useState(false);
+    const likeIconSize = gridMode === "3" ? 18 : gridMode === "2" ? 22 : 26;
+    const metadataTopPadding = measuredImgH > 0
+        ? `${measuredImgH + (isMobile ? 10 : 8) + 4}px`
+        : "0.15rem";
+    const equalAreaImageStyle = useMemo<CSSProperties>(() => {
+        if (!isMobile || !mobileImageArea || mobileImageArea <= 0 || measuredImgW <= 0) return {};
+        return {
+            width: `${Math.sqrt(mobileImageArea * aspectRatio)}px`,
+            height: `${Math.sqrt(mobileImageArea / aspectRatio)}px`,
+            maxWidth: "none",
+            maxHeight: "none",
+            objectFit: "contain",
+        };
+    }, [aspectRatio, isMobile, measuredImgW, mobileImageArea]);
 
     // Sync on parent prop change (e.g., after DB load)
     useEffect(() => { setLiked(initialLiked || false); }, [initialLiked]);
@@ -71,16 +96,44 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
         setMeasuredImgW(inner.offsetWidth);
     }, []);
 
-    useEffect(() => {
-        recalc();
-        window.addEventListener("resize", recalc);
-        return () => window.removeEventListener("resize", recalc);
+    const scheduleRecalc = useCallback(() => {
+        if (recalcFrame.current !== null) {
+            cancelAnimationFrame(recalcFrame.current);
+        }
+        recalcFrame.current = requestAnimationFrame(() => {
+            recalc();
+            recalcFrame.current = requestAnimationFrame(() => {
+                recalc();
+                recalcFrame.current = null;
+            });
+        });
     }, [recalc]);
+
+    useEffect(() => {
+        const c = containerRef.current;
+        if (!c) return undefined;
+        const inner = c.querySelector(".art-card-inner") as HTMLElement | null;
+        const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleRecalc) : null;
+
+        scheduleRecalc();
+        window.addEventListener("resize", scheduleRecalc);
+        observer?.observe(c);
+        if (inner) observer?.observe(inner);
+
+        return () => {
+            window.removeEventListener("resize", scheduleRecalc);
+            observer?.disconnect();
+            if (recalcFrame.current !== null) {
+                cancelAnimationFrame(recalcFrame.current);
+                recalcFrame.current = null;
+            }
+        };
+    }, [scheduleRecalc]);
 
     // Recalculate whenever the viewing zone height changes (e.g., density toggle).
     useEffect(() => {
-        requestAnimationFrame(recalc);
-    }, [zoneH, recalc]);
+        scheduleRecalc();
+    }, [zoneH, gridMode, isMobile, scheduleRecalc]);
 
     return (
         <div
@@ -141,6 +194,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                             userSelect: "none",
                             WebkitUserSelect: "none",
                             pointerEvents: "auto",
+                            ...equalAreaImageStyle,
                         }}
                     />
                 ) : (
@@ -152,6 +206,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         alignSelf: "center",
                         flexShrink: 0,
                         boxShadow: "2px 8px 22px rgba(28,25,22,0.36), 0 2px 6px rgba(28,25,22,0.20)",
+                        ...equalAreaImageStyle,
                     }} />
                 )}
             </div>
@@ -166,9 +221,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         : `-${emptyBottom - (isMobile ? 10 : 8)}px`,
                     marginLeft: `${textPad - 4}px`,
                     marginRight: `${textPad - 4}px`,
-                    paddingTop: measuredImgH > 0
-                        ? `${measuredImgH + (isMobile ? 10 : 8) + 4}px`
-                        : "0.15rem",
+                    paddingTop: metadataTopPadding,
                     paddingBottom: "0.5rem",
                     paddingLeft: "0.55rem",
                     paddingRight: "0.55rem",
@@ -181,15 +234,11 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                     borderBottom: "1px solid rgba(180,180,190,0.3)",
                     borderRadius: "4px",
                     boxShadow: "0 4px 20px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.6) inset",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: "0.3rem",
                 }}>
                     {/* Left: text info */}
                     <div style={{
                         display: "flex", flexDirection: "column", gap: "0.05rem",
-                        flex: 1, minWidth: 0,
+                        minWidth: 0,
                         pointerEvents: "auto",
                     }}>
                         <p style={{
@@ -198,7 +247,8 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                             fontWeight: 400, fontStyle: "italic", letterSpacing: "0.01em",
                             color: "#333", margin: 0,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            lineHeight: 1.2
+                            lineHeight: 1.2,
+                            paddingRight: `${likeIconSize + 6}px`,
                         }}>
                             {work.title}
                         </p>
@@ -285,8 +335,13 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         }}
                         aria-label={liked ? "Unlike" : "Like"}
                         style={{
+                            position: "absolute",
+                            top: metadataTopPadding,
+                            right: "0.55rem",
+                            width: `${likeIconSize}px`,
+                            height: `${likeIconSize}px`,
                             background: "none", border: "none", cursor: "pointer",
-                            padding: "6px", marginTop: "-2px", flexShrink: 0,
+                            padding: 0,
                             display: "flex", alignItems: "center", justifyContent: "center",
                             transform: likeAnimating ? "scale(1.35)" : "scale(1)",
                             transition: "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -297,8 +352,8 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         }}
                     >
                         <svg
-                            width={gridMode === "3" ? "18" : gridMode === "2" ? "22" : "26"}
-                            height={gridMode === "3" ? "18" : gridMode === "2" ? "22" : "26"}
+                            width={likeIconSize}
+                            height={likeIconSize}
                             viewBox="0 0 24 24"
                             fill={liked ? "#e84057" : "none"}
                             stroke={liked ? "#e84057" : "#888"}

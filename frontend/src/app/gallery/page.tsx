@@ -21,6 +21,53 @@ import { DEFAULT_GRADIENTS, SORT_OPTIONS, IMAGE_ZONE } from "./constants";
 import { sortWorks } from "./utils";
 import { ArtCard } from "./components/ArtCard";
 
+type MobileImageSizingItem = {
+    width_cm?: number;
+    height_cm?: number;
+    width_in?: number;
+    height_in?: number;
+    orientation?: string;
+};
+
+const getDisplayAspectRatio = (item: MobileImageSizingItem) => {
+    const width = item.width_cm || item.width_in || 0;
+    const height = item.height_cm || item.height_in || 0;
+    if (width > 0 && height > 0) return width / height;
+    const orientation = (item.orientation || "vertical").toLowerCase();
+    if (orientation === "square") return 1;
+    if (orientation === "horizontal") return 1.45;
+    return 0.72;
+};
+
+const getEqualRowImageAreas = <T extends MobileImageSizingItem>(
+    items: T[],
+    columns: number,
+    columnWidth: number,
+    zoneH: number,
+    maxWidthFactor: number,
+    getMaxHeightFactor: (item: T) => number,
+) => {
+    if (columns <= 0 || columnWidth <= 0 || zoneH <= 0) return [];
+    const areas = new Array<number>(items.length);
+
+    for (let start = 0; start < items.length; start += columns) {
+        const row = items.slice(start, start + columns);
+        const targetArea = Math.min(...row.map(item => {
+            const aspectRatio = getDisplayAspectRatio(item);
+            const maxWidth = columnWidth * maxWidthFactor;
+            const maxHeight = zoneH * getMaxHeightFactor(item);
+            const width = Math.min(maxWidth, maxHeight * aspectRatio);
+            return width * (width / aspectRatio);
+        }));
+
+        row.forEach((_, offset) => {
+            areas[start + offset] = targetArea;
+        });
+    }
+
+    return areas;
+};
+
 /**
  * Main Gallery exhibition page.
  * Manages fetching of all artworks and collections, sorting state, 
@@ -37,6 +84,7 @@ export default function GalleryPage() {
     const [gridMode, setGridMode] = useState<"1" | "2" | "3">("2");
     const [gridLoaded, setGridLoaded] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [viewportWidth, setViewportWidth] = useState(0);
 
     const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
     const [visibleCount, setVisibleCount] = useState(12);
@@ -201,6 +249,7 @@ export default function GalleryPage() {
     useEffect(() => {
         const update = () => {
             const w = window.innerWidth;
+            setViewportWidth(w);
             setIsMobile(w < 768);
             setCols(w < 480 ? 1 : w < 768 ? 2 : w < 1100 ? 3 : 4);
         };
@@ -276,6 +325,35 @@ export default function GalleryPage() {
         if (gridMode === "2") return "3rem 16px";
         return "2rem 10px";
     };
+
+    const mobileColumnCount = useMemo(() => {
+        if (gridMode === "1") return 1;
+        if (gridMode === "2") return 2;
+        return 3;
+    }, [gridMode]);
+
+    const mobileColumnGapPx = useMemo(() => {
+        if (gridMode === "1") return 16;
+        if (gridMode === "2") return 20;
+        return 8;
+    }, [gridMode]);
+
+    const getMobileImageAreas = useCallback((works: Artwork[]) => {
+        if (!isMobile || viewportWidth <= 0) return [];
+        const gridWidth = Math.max(0, viewportWidth - 40);
+        const columnWidth = (gridWidth - mobileColumnGapPx * (mobileColumnCount - 1)) / mobileColumnCount;
+        return getEqualRowImageAreas(
+            works,
+            mobileColumnCount,
+            columnWidth,
+            IMAGE_ZONE[gridMode] || 380,
+            0.76,
+            item => {
+                const orientation = (item.orientation || "").toLowerCase();
+                return orientation === "horizontal" || orientation === "square" ? 0.76 : 0.90;
+            },
+        );
+    }, [gridMode, isMobile, mobileColumnCount, mobileColumnGapPx, viewportWidth]);
 
     const effectiveLikedIds = user ? likedIds : new Set(pendingLikes);
 
@@ -415,6 +493,7 @@ export default function GalleryPage() {
 
             <div style={{ display: "flex", flexDirection: "column" }}>
                 {sorted.map(({ name, id, works, totalInGroup }, idx) => {
+                    const mobileImageAreas = getMobileImageAreas(works);
                     return (
                         <section key={name} style={{ paddingBottom: "1.25rem", marginBottom: 0 }}>
                             {/* Visual hierarchy header: Full-width ribbon styled collection title. */}
@@ -476,6 +555,7 @@ export default function GalleryPage() {
                                                     gridMode={gridMode}
                                                     isMobile={isMobile}
                                                     liked={effectiveLikedIds.has(work.id)}
+                                                    mobileImageArea={mobileImageAreas[i]}
                                                     onLike={async (id: number, newState: boolean) => {
                                                         try {
                                                             if (newState) {

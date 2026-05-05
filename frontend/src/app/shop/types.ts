@@ -17,6 +17,7 @@ export interface Product {
     year?: number;
     has_prints?: boolean;
     orientation?: string;
+    shop_sort_order?: number;
     base_print_price?: number;
     storefront_summary?: {
         country_code: string;
@@ -48,4 +49,4 @@ export interface Product {
 export interface Label { id: number; title: string; category_id?: number; }
 export interface LabelCategory { id: number; title: string; }
 
-export type SortKey = "newest" | "price-low" | "price-high" | "size-small" | "size-large";
+export type SortKey = "curated" | "newest" | "price-low" | "price-high" | "size-small" | "size-large";

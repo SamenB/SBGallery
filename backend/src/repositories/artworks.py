@@ -3,7 +3,7 @@ Repository for managing artwork data access.
 Extends BaseRepository to provide specialized filtering and eager loading of tags.
 """
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.orm import joinedload
 
 from src.exeptions import ObjectNotFoundException
@@ -154,6 +154,10 @@ class ArtworksRepository(BaseRepository):
             orientation=orientation,
             size_category=size_category,
         )
+        if surface == "shop":
+            query = query.order_by(self.model.shop_sort_order.asc(), self.model.id.desc())
+        else:
+            query = query.order_by(self.model.id.desc())
         query = query.limit(limit).offset(offset)
 
         result = await self.session.execute(query)
@@ -188,12 +192,29 @@ class ArtworksRepository(BaseRepository):
             orientation=orientation,
             size_category=size_category,
         )
-        query = query.order_by(self.model.id.desc()).limit(limit).offset(offset)
+        query = (
+            query.order_by(self.model.shop_sort_order.asc(), self.model.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self.session.execute(query)
         return [
             ArtworkWithLabels.model_validate(model, from_attributes=True)
             for model in result.unique().scalars().all()
         ]
+
+    async def get_next_shop_sort_order(self) -> int:
+        result = await self.session.execute(select(func.max(self.model.shop_sort_order)))
+        current_max = result.scalar_one_or_none() or 0
+        return int(current_max) + 100
+
+    async def update_shop_sort_order(self, ordered_ids: list[int]) -> None:
+        for index, artwork_id in enumerate(ordered_ids, start=1):
+            await self.session.execute(
+                update(self.model)
+                .where(self.model.id == artwork_id)
+                .values(shop_sort_order=index * 100)
+            )
 
     async def get_one(self, **filter_by):
         query = self._base_query().filter_by(**filter_by)

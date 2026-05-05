@@ -289,6 +289,8 @@ class ArtworkService(BaseService):
         """
         try:
             artwork_dict = artwork_data.model_dump()
+            if artwork_dict.get("shop_sort_order") is None:
+                artwork_dict["shop_sort_order"] = await self.db.artworks.get_next_shop_sort_order()
             artwork_dict["slug"] = await self.generate_unique_slug(artwork_data.title)
 
             artwork = await self.db.artworks.add(ArtworkAdd(**artwork_dict))
@@ -326,6 +328,7 @@ class ArtworkService(BaseService):
             artwork_dict.pop("images", None)
             artwork_dict.pop("labels", None)
             artwork_dict.pop("slug", None)
+            artwork_dict.pop("shop_sort_order", None)
 
             # Reattach preserved fields
             artwork_dict["slug"] = existing.slug
@@ -372,6 +375,27 @@ class ArtworkService(BaseService):
             )
         await self._refresh_materialized_storefront([artwork_id])
         logger.info("Artwork partially updated: id={}", artwork_id)
+
+    async def update_shop_order(self, artwork_ids: list[int]) -> None:
+        unique_ids = []
+        seen_ids = set()
+        for artwork_id in artwork_ids:
+            if artwork_id in seen_ids:
+                continue
+            unique_ids.append(int(artwork_id))
+            seen_ids.add(artwork_id)
+
+        if not unique_ids:
+            return
+
+        try:
+            await self.db.artworks.update_shop_sort_order(unique_ids)
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise DatabaseException
+        await self._refresh_materialized_storefront(unique_ids)
+        logger.info("Artwork shop order updated: count={}", len(unique_ids))
 
     async def delete_artwork(self, artwork_id: int):
         """
