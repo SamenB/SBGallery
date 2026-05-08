@@ -252,6 +252,7 @@ async def test_submit_order_items_uses_prepared_asset_url(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_submit_order_items_uses_resolved_print_area_name(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "https://example.test")
     _FakeProdigiClient.calls = []
     _FakeProdigiClient.order_response = None
     monkeypatch.setattr(
@@ -327,6 +328,7 @@ async def test_preflight_marks_payload_blocked_when_upstream_gates_fail(monkeypa
 
 @pytest.mark.asyncio
 async def test_submit_order_items_batches_multiple_prints_in_one_prodigi_request(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "https://example.test")
     _FakeProdigiClient.calls = []
     _FakeProdigiClient.order_response = None
     monkeypatch.setattr(
