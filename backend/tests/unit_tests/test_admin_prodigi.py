@@ -1,8 +1,8 @@
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
 
+from src.exeptions import InvalidDataException
 from src.init import redis_manager
 from src.integrations.prodigi.api.admin_prodigi import (
     ARTWORK_PRINT_CACHE_PREFIXES,
@@ -153,7 +153,7 @@ async def test_refresh_artwork_payloads_requires_active_bake(monkeypatch):
         DummyRepository,
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(InvalidDataException) as exc_info:
         await refresh_artwork_payloads(
             admin_id=1,
             db=SimpleNamespace(session=object()),

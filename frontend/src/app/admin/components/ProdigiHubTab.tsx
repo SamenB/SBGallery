@@ -362,9 +362,12 @@ interface FulfillmentJobDetail {
   events: Array<{
     id: number;
     event_type: string;
+    event_uid?: string | null;
     stage: string;
     status: string;
     external_id?: string | null;
+    request_payload?: unknown;
+    response_payload?: unknown;
     metadata?: unknown;
     error?: string | null;
     created_at?: string;
@@ -2091,11 +2094,44 @@ export default function ProdigiHubTab() {
                           key={event.id}
                           className="border border-[#31323E]/8 p-2 text-xs"
                         >
-                          <div className="font-semibold">
-                            {event.event_type}/{event.stage}: {event.status}
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="font-semibold">
+                              {event.event_type}/{event.stage}: {event.status}
+                              {event.external_id ? (
+                                <span className="ml-2 text-[#31323E]/45">
+                                  {event.external_id}
+                                </span>
+                              ) : null}
+                            </div>
+                            {Boolean(
+                              event.response_payload ||
+                                event.request_payload ||
+                                event.metadata,
+                            ) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRawJson({
+                                    event,
+                                    payload:
+                                      event.response_payload ||
+                                      event.request_payload ||
+                                      event.metadata,
+                                  })
+                                }
+                                className="underline underline-offset-2"
+                              >
+                                Raw JSON
+                              </button>
+                            )}
                           </div>
                           {event.error && (
                             <div className="text-rose-700">{event.error}</div>
+                          )}
+                          {event.event_uid && (
+                            <div className="mt-1 break-all text-[10px] text-[#31323E]/45">
+                              event uid {event.event_uid}
+                            </div>
                           )}
                         </div>
                       ))}

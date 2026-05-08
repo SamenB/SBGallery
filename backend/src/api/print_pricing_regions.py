@@ -1,9 +1,10 @@
 """API endpoints for managing print pricing regions and their multipliers."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from src.api.dependencies import AdminDep, DBDep
+from src.exeptions import InvalidDataException, ObjectNotFoundException
 from src.services.print_pricing_regions import ALL_CATEGORY_IDS, PrintPricingRegionService
 
 router = APIRouter(prefix="/print-pricing", tags=["Print Pricing"])
@@ -48,9 +49,9 @@ async def update_region_multipliers(
             if value < 1.0 or value > 10.0
         ]
         if invalid:
-            raise HTTPException(
-                status_code=422,
+            raise InvalidDataException(
                 detail=f"Multipliers must be between 1.0 and 10.0: {', '.join(invalid)}",
+                status_code=422,
             )
     service = PrintPricingRegionService(db)
     result = await service.update_region_multipliers(
@@ -59,7 +60,7 @@ async def update_region_multipliers(
         category_multipliers=body.category_multipliers,
     )
     if result is None:
-        raise HTTPException(status_code=404, detail="Region not found")
+        raise ObjectNotFoundException(detail="Region not found")
     return result
 
 
@@ -75,7 +76,7 @@ async def update_country_region_assignment(
         target_region_slug=body.target_region_slug,
     )
     if result is None:
-        raise HTTPException(status_code=404, detail="Pricing region or country was not found")
+        raise ObjectNotFoundException(detail="Pricing region or country was not found")
     return {
         "regions": result,
         "category_ids": ALL_CATEGORY_IDS,

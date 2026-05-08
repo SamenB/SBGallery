@@ -111,6 +111,48 @@ class OrderService(BaseService):
         except SQLAlchemyError:
             raise DatabaseException
 
+    async def get_public_tracking_by_email(self, email: str) -> dict:
+        """
+        Returns the customer-safe tracking payload for public email lookup.
+        """
+        if not email or "@" not in email:
+            return {"status": "OK", "data": []}
+        orders = await self.get_orders_by_email(email.strip().lower())
+        return {
+            "status": "OK",
+            "data": [self._serialize_public_tracking_order(order) for order in orders],
+        }
+
+    def _serialize_public_tracking_order(self, order) -> dict:
+        return {
+            "id": order.id,
+            "created_at": str(order.created_at) if order.created_at else None,
+            "payment_status": order.payment_status,
+            "fulfillment_status": order.fulfillment_status,
+            "total_price": order.total_price,
+            "first_name": order.first_name,
+            "last_name": order.last_name,
+            "shipping_city": order.shipping_city,
+            "shipping_country": order.shipping_country,
+            "tracking_number": order.tracking_number,
+            "carrier": order.carrier,
+            "tracking_url": order.tracking_url,
+            "confirmed_at": str(order.confirmed_at) if order.confirmed_at else None,
+            "print_ordered_at": str(order.print_ordered_at) if order.print_ordered_at else None,
+            "shipped_at": str(order.shipped_at) if order.shipped_at else None,
+            "delivered_at": str(order.delivered_at) if order.delivered_at else None,
+            "items": [
+                {
+                    "artwork_id": item.artwork_id,
+                    "edition_type": item.edition_type,
+                    "finish": item.finish,
+                    "size": item.size,
+                    "price": item.price,
+                }
+                for item in (order.items or [])
+            ],
+        }
+
     async def create_order(self, order_data: OrderAddRequest, user_id: int | None):
         """
         Processes a new order placement.

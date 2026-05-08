@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Body, HTTPException, Query
-from sqlalchemy import func, select
+from fastapi import APIRouter, Body, Query
 
 from src.api.dependencies import AdminDep, DBDep
 from src.config import settings
+from src.exeptions import ArtShopExeption, InvalidDataException, ObjectNotFoundException
 from src.integrations.prodigi.api.print_options import MARKUP
 from src.integrations.prodigi.catalog_pipeline.pipeline import ProdigiCatalogPipeline
 from src.integrations.prodigi.connectors.client import ProdigiClient
@@ -42,10 +42,10 @@ from src.integrations.prodigi.services.prodigi_storefront_settings import (
 from src.integrations.prodigi.services.prodigi_storefront_snapshot import (
     ProdigiStorefrontSnapshotService,
 )
-from src.models.prodigi_fulfillment import (
-    ProdigiFulfillmentEventOrm,
-    ProdigiFulfillmentGateResultOrm,
-    ProdigiFulfillmentJobOrm,
+from src.schemas.prodigi_fulfillment import (
+    ProdigiFulfillmentEventRead,
+    ProdigiFulfillmentGateResultRead,
+    ProdigiFulfillmentJobRead,
 )
 
 router = APIRouter(prefix="/v1/admin/prodigi", tags=["Admin Prodigi Diagnostics"])
@@ -75,7 +75,7 @@ async def update_storefront_settings(
         response["cache_clear"] = cache_clear
         return response
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise InvalidDataException(detail=str(exc), status_code=422) from exc
 
 
 @router.get("/production-prepare")
@@ -88,7 +88,7 @@ async def get_production_prepare_status(
         decision = await ProdigiProductionPrepareDecider(db.session).evaluate(force=force)
         return decision.as_dict()
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise ArtShopExeption(detail=str(exc), status_code=500) from exc
 
 
 @router.post("/production-prepare")
@@ -149,11 +149,11 @@ async def run_production_prepare(
             "settings": settings_payload,
         }
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise InvalidDataException(detail=str(exc), status_code=422) from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise InvalidDataException(detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise ArtShopExeption(detail=str(exc), status_code=500) from exc
 
 
 @router.get("/fulfillment/jobs")
@@ -163,62 +163,24 @@ async def get_fulfillment_jobs(
     status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
 ):
-    stmt = (
-        select(ProdigiFulfillmentJobOrm)
-        .order_by(ProdigiFulfillmentJobOrm.updated_at.desc())
-        .limit(limit)
-    )
-    if status:
-        stmt = stmt.where(ProdigiFulfillmentJobOrm.status == status)
-    jobs = list((await db.session.execute(stmt)).scalars().all())
-
-    counts = (
-        await db.session.execute(
-            select(ProdigiFulfillmentJobOrm.status, func.count())
-            .group_by(ProdigiFulfillmentJobOrm.status)
-            .order_by(ProdigiFulfillmentJobOrm.status)
-        )
-    ).all()
+    jobs = await db.prodigi_fulfillment.get_jobs(status=status, limit=limit)
+    counts = await db.prodigi_fulfillment.get_status_counts()
     return {
         "mode": "sandbox" if settings.PRODIGI_SANDBOX else "live",
         "webhook_secret_configured": bool(settings.PRODIGI_WEBHOOK_SECRET),
-        "counts": {row[0]: int(row[1]) for row in counts},
+        "counts": counts,
         "jobs": [_serialize_job(job) for job in jobs],
     }
 
 
 @router.get("/fulfillment/jobs/{job_id}")
 async def get_fulfillment_job_detail(admin_id: AdminDep, db: DBDep, job_id: int):
-    job = (
-        await db.session.execute(
-            select(ProdigiFulfillmentJobOrm).where(ProdigiFulfillmentJobOrm.id == job_id).limit(1)
-        )
-    ).scalar_one_or_none()
+    job = await db.prodigi_fulfillment.get_job_by_id(job_id)
     if job is None:
-        raise HTTPException(status_code=404, detail="Fulfillment job not found")
+        raise ObjectNotFoundException(detail="Fulfillment job not found")
 
-    gates = list(
-        (
-            await db.session.execute(
-                select(ProdigiFulfillmentGateResultOrm)
-                .where(ProdigiFulfillmentGateResultOrm.job_id == job_id)
-                .order_by(ProdigiFulfillmentGateResultOrm.created_at.asc())
-            )
-        )
-        .scalars()
-        .all()
-    )
-    events = list(
-        (
-            await db.session.execute(
-                select(ProdigiFulfillmentEventOrm)
-                .where(ProdigiFulfillmentEventOrm.job_id == job_id)
-                .order_by(ProdigiFulfillmentEventOrm.created_at.asc())
-            )
-        )
-        .scalars()
-        .all()
-    )
+    gates = await db.prodigi_fulfillment.get_gates_for_job(job_id)
+    events = await db.prodigi_fulfillment.get_events_for_job(job_id)
     return {
         "job": _serialize_job(job),
         "gates": [_serialize_gate(gate) for gate in gates],
@@ -278,7 +240,7 @@ async def run_fulfillment_validation_report(
     )
 
 
-def _serialize_job(job: ProdigiFulfillmentJobOrm) -> dict:
+def _serialize_job(job: ProdigiFulfillmentJobRead) -> dict:
     return {
         "id": job.id,
         "order_id": job.order_id,
@@ -301,7 +263,7 @@ def _serialize_job(job: ProdigiFulfillmentJobOrm) -> dict:
     }
 
 
-def _serialize_gate(gate: ProdigiFulfillmentGateResultOrm) -> dict:
+def _serialize_gate(gate: ProdigiFulfillmentGateResultRead) -> dict:
     return {
         "id": gate.id,
         "order_id": gate.order_id,
@@ -315,15 +277,18 @@ def _serialize_gate(gate: ProdigiFulfillmentGateResultOrm) -> dict:
     }
 
 
-def _serialize_event(event: ProdigiFulfillmentEventOrm) -> dict:
+def _serialize_event(event: ProdigiFulfillmentEventRead) -> dict:
     return {
         "id": event.id,
         "order_id": event.order_id,
         "order_item_id": event.order_item_id,
         "event_type": event.event_type,
+        "event_uid": event.event_uid,
         "stage": event.stage,
         "status": event.status,
         "external_id": event.external_id,
+        "request_payload": event.request_payload,
+        "response_payload": event.response_payload,
         "metadata": event.metadata_json,
         "error": event.error,
         "created_at": event.created_at,
@@ -364,7 +329,7 @@ async def probe_prodigi(
             "results": results,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.get("/raw-sku")
@@ -377,10 +342,12 @@ async def get_raw_sku(admin_id: AdminDep, sku: str = Query(...)):
             # We use the low-level get helper from the client to see everything
             raw_data = await client.get(f"/products/{sku}")
             if not raw_data:
-                raise HTTPException(status_code=404, detail="SKU not found in Prodigi")
+                raise ObjectNotFoundException(detail="SKU not found in Prodigi")
             return raw_data
+        except ObjectNotFoundException:
+            raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.get("/raw-quote")
@@ -405,7 +372,7 @@ async def get_raw_quote(
             raw_data = await client.get_quote(sku, country, "EUR", attr_dict)
             return raw_data
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.get("/catalog-preview")
@@ -439,7 +406,7 @@ async def get_catalog_preview(
             include_notice_level=effective_include_notice,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.post("/catalog-preview/create-database")
@@ -472,7 +439,7 @@ async def create_catalog_database_preview(
         result["cache_clear"] = cache_clear
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.post("/refresh-artwork-payloads")
@@ -488,8 +455,7 @@ async def refresh_artwork_payloads(
         repository = ProdigiStorefrontRepository(db.session)
         active_bake = await repository.get_active_bake()
         if active_bake is None:
-            raise HTTPException(
-                status_code=400,
+            raise InvalidDataException(
                 detail=(
                     "No active storefront bake exists yet. Build or activate a bake in "
                     "Prodigi Hub before refreshing artwork payloads."
@@ -515,10 +481,10 @@ async def refresh_artwork_payloads(
             "artwork_storefront_materialization": materialization,
             "cache_clear": cache_clear,
         }
-    except HTTPException:
+    except InvalidDataException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e
 
 
 @router.get("/storefront-snapshot")
@@ -536,4 +502,4 @@ async def get_storefront_snapshot(
             selected_ratio=aspect_ratio
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e

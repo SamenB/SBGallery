@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
+from src.exeptions import ArtShopExeption, ObjectNotFoundException
 from src.integrations.prodigi.services.prodigi_catalog import ProdigiCatalogService
 
 router = APIRouter(prefix="/v1/print-options", tags=["Print Options"])
@@ -19,7 +20,7 @@ async def get_options(
     try:
         grouped = await catalog_service.get_options(country, aspect_ratio)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ArtShopExeption(detail=str(e), status_code=500) from e
 
     # Format according to Phase 2 specification
     response = {
@@ -170,7 +171,7 @@ async def get_quote(
 
     quote = await catalog_service.get_quote_cached(sku, country, currency, attr_dict)
     if not quote or "quotes" not in quote:
-        raise HTTPException(status_code=404, detail="Quote not available")
+        raise ObjectNotFoundException(detail="Quote not available")
 
     shipping_options = []
     for q in quote["quotes"]:

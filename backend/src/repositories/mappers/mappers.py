@@ -10,6 +10,13 @@ from src.models.label_categories import LabelCategoriesOrm
 from src.models.labels import ArtworkLabelsOrm, LabelsOrm
 from src.models.orders import OrderItemOrm, OrdersOrm
 from src.models.print_pricing import PrintAspectRatioOrm
+from src.models.prodigi_fulfillment import (
+    ProdigiFulfillmentEventOrm,
+    ProdigiFulfillmentGateResultOrm,
+    ProdigiFulfillmentJobOrm,
+    ProdigiFulfillmentShipmentOrm,
+)
+from src.models.site_settings import SiteSettingsOrm
 from src.models.users import UsersOrm
 from src.repositories.mappers.base import DataMapper
 from src.schemas.artwork_print_assets import ArtworkPrintAsset
@@ -18,6 +25,13 @@ from src.schemas.email_templates import EmailTemplate
 from src.schemas.labels import ArtworkLabel, Label, LabelCategory
 from src.schemas.orders import Order, OrderItem
 from src.schemas.print_pricing import AspectRatioItem
+from src.schemas.prodigi_fulfillment import (
+    ProdigiFulfillmentEventRead,
+    ProdigiFulfillmentGateResultRead,
+    ProdigiFulfillmentJobRead,
+    ProdigiFulfillmentShipmentRead,
+)
+from src.schemas.settings import SiteSettingsResponse
 from src.schemas.users import User
 
 
@@ -76,8 +90,33 @@ class EmailTemplateMapper(DataMapper):
     schema = EmailTemplate
 
 
+class SiteSettingsMapper(DataMapper):
+    db_model = SiteSettingsOrm
+    schema = SiteSettingsResponse
+
+
 class AspectRatioMapper(DataMapper):
     """Mapper for PrintAspectRatioOrm entities."""
 
     db_model = PrintAspectRatioOrm
     schema = AspectRatioItem
+
+
+class ProdigiFulfillmentJobMapper(DataMapper):
+    db_model = ProdigiFulfillmentJobOrm
+    schema = ProdigiFulfillmentJobRead
+
+
+class ProdigiFulfillmentEventMapper(DataMapper):
+    db_model = ProdigiFulfillmentEventOrm
+    schema = ProdigiFulfillmentEventRead
+
+
+class ProdigiFulfillmentGateResultMapper(DataMapper):
+    db_model = ProdigiFulfillmentGateResultOrm
+    schema = ProdigiFulfillmentGateResultRead
+
+
+class ProdigiFulfillmentShipmentMapper(DataMapper):
+    db_model = ProdigiFulfillmentShipmentOrm
+    schema = ProdigiFulfillmentShipmentRead

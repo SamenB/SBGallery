@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
@@ -57,6 +58,18 @@ SUBMITTED_STATUSES = {
     "complete",
     "cancelled",
 }
+
+
+def is_public_https_url(url: str | None) -> bool:
+    if not url:
+        return False
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    return (
+        parsed.scheme == "https"
+        and bool(hostname)
+        and hostname not in {"localhost", "127.0.0.1", "::1"}
+    )
 
 
 @dataclass(slots=True)
@@ -147,13 +160,14 @@ class ProdigiFulfillmentWorkflow:
 
         mode = "sandbox" if settings.PRODIGI_SANDBOX else "live"
         try:
+            callback = callback_url()
             body = build_order_payload(
                 order=order,
                 prepared_items=prepared_items,
                 job_id=job_id,
                 merchant_reference=self.merchant_reference(order),
                 idempotency_key=self.idempotency_key(order, job),
-                callback_url=callback_url(),
+                callback_url=callback,
                 mode=mode,
             )
         except ProdigiPayloadValidationError as exc:
@@ -171,6 +185,37 @@ class ProdigiFulfillmentWorkflow:
                     measured={"errors": exc.errors},
                     expected={"prodigi_order_payload": "valid"},
                     error=str(exc),
+                ),
+            )
+            if commit:
+                await self.db_session.commit()
+            return ProdigiPreflightResult(job=job, prepared_items=prepared_items, passed=False)
+
+        callback_public_https = is_public_https_url(body.get("callbackUrl"))
+        if not callback_public_https:
+            error = (
+                "Prodigi callback URL must be a public HTTPS URL before submit. "
+                "Configure PUBLIC_BASE_URL=https://samen-bondarenko.com or another public "
+                "backend URL."
+            )
+            if job is not None:
+                job.status = "blocked"
+                job.last_error = error
+                job.request_payload = body
+                job.payload_hash = stable_payload_hash(body)
+            await self.quality.persist_order_gate(
+                order=order,
+                job_id=job_id,
+                gate=FulfillmentGateResult(
+                    gate="callback_url_public_https",
+                    status=FAILED,
+                    measured={
+                        "callback_url": body.get("callbackUrl"),
+                        "public_base_url": settings.PUBLIC_BASE_URL,
+                        "public_https": False,
+                    },
+                    expected={"callback_url": "public HTTPS"},
+                    error=error,
                 ),
             )
             if commit:
@@ -197,6 +242,8 @@ class ProdigiFulfillmentWorkflow:
                     "idempotency_key": body.get("idempotencyKey"),
                     "item_count": len(body.get("items") or []),
                     "has_callback_url": bool(body.get("callbackUrl")),
+                    "callback_url": body.get("callbackUrl"),
+                    "callback_url_public_https": callback_public_https,
                 },
                 expected={"prodigi_order_payload": "valid", "items": len(print_items)},
             ),

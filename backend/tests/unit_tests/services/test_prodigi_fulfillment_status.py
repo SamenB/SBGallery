@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from src.integrations.prodigi.fulfillment.status import (
     apply_order_status_to_job,
     apply_prodigi_items_to_local_items,
@@ -7,6 +9,7 @@ from src.integrations.prodigi.fulfillment.status import (
     extract_stage,
     format_item_status,
     job_status_from_order_payload,
+    webhook_event_exists,
 )
 
 
@@ -103,3 +106,26 @@ def test_format_item_status_includes_first_issue_code():
         format_item_status("InProgress", [{"errorCode": "order.items.assets.NotDownloaded"}])
         == "InProgress - order.items.assets.NotDownloaded"
     )
+
+
+class _ScalarResult:
+    def __init__(self, value):
+        self._value = value
+
+    def scalar_one_or_none(self):
+        return self._value
+
+
+class _DuplicateEventSession:
+    def __init__(self, value):
+        self.value = value
+
+    async def execute(self, statement):
+        return _ScalarResult(self.value)
+
+
+@pytest.mark.asyncio
+async def test_webhook_event_exists_supports_duplicate_event_guard():
+    assert await webhook_event_exists(_DuplicateEventSession(42), "evt_123") is True
+    assert await webhook_event_exists(_DuplicateEventSession(None), "evt_123") is False
+    assert await webhook_event_exists(_DuplicateEventSession(42), None) is False

@@ -4,7 +4,7 @@ Read this once before changing ArtShop. Keep it loaded mentally; do not expand i
 
 ## Working Rule
 
-1. Start with `git status --short`. Preserve unrelated dirty work.
+1. Start with `git status --short`.
 2. Inspect the closest real files before editing. Do not guess architecture from filenames.
 3. Find the source of truth before adding logic: backend service, repository, schema, migration, materialized payload, frontend context, or external provider.
 4. Reuse local patterns first. Add abstractions only when they remove real duplication or isolate a clear responsibility.
@@ -52,6 +52,7 @@ Current layers:
 Rules:
 
 - Do not put business policy in routes, serializers, Celery tasks, frontend code, or cache keys.
+- API routes stay thin and normally do not catch service/repository domain errors. Raise `ArtShopExeption` subclasses from services and let the global exception handler map them to `{"detail": ...}` responses. Use FastAPI `HTTPException` only for HTTP/auth/protocol concerns that are not domain errors.
 - Services normally own commits/rollbacks. Repositories do not decide business policy.
 - Schema changes require Alembic migrations. If admin/orders break after schema work, check migration state first.
 - Celery tasks stay thin: receive IDs/light payloads, fetch current state, call services, use explicit retry/idempotency policy.

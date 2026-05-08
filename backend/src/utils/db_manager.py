@@ -8,6 +8,9 @@ import asyncio
 
 from sqlalchemy.exc import OperationalError
 
+from src.integrations.prodigi.repositories.prodigi_fulfillment import (
+    ProdigiFulfillmentRepository,
+)
 from src.repositories.artwork_print_assets import ArtworkPrintAssetsRepository
 from src.repositories.artworks import ArtworksRepository
 from src.repositories.email_templates import EmailTemplatesRepository
@@ -18,6 +21,8 @@ from src.repositories.labels import (
 )
 from src.repositories.orders import OrderItemsRepository, OrdersRepository
 from src.repositories.print_pricing import PrintAspectRatioRepository
+from src.repositories.site_settings import SiteSettingsRepository
+from src.repositories.user_likes import UserLikesRepository
 from src.repositories.users import UsersRepository
 
 
@@ -49,6 +54,9 @@ class DBManager:
         self.label_categories = LabelCategoriesRepository(self.session)
         self.email_templates = EmailTemplatesRepository(self.session)
         self.aspect_ratios = PrintAspectRatioRepository(self.session)
+        self.prodigi_fulfillment = ProdigiFulfillmentRepository(self.session)
+        self.site_settings = SiteSettingsRepository(self.session)
+        self.user_likes = UserLikesRepository(self.session)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

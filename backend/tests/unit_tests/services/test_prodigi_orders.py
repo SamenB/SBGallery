@@ -76,6 +76,7 @@ class _FakeQualityService:
         "print_area_name": "default",
     }
     persisted_order_gates = []
+    events = []
 
     def __init__(self, db_session):
         self.db_session = db_session
@@ -94,6 +95,7 @@ class _FakeQualityService:
         )
 
     def add_event(self, **kwargs):
+        self.events.append(kwargs)
         return None
 
     def build_gate_summary(self, prepared_items):
@@ -180,6 +182,34 @@ async def test_preflight_builds_payload_preview_without_submitting(monkeypatch):
         "https://example.test/"
     )
     assert _FakeProdigiClient.calls == []
+
+
+@pytest.mark.asyncio
+async def test_preflight_blocks_localhost_callback_url(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "http://localhost:8000")
+    _FakeQualityService.persisted_order_gates = []
+    _FakeQualityService.events = []
+    _FakeQualityService.prepared_asset = {
+        "file_url": "https://assets.example.test/print.png",
+        "print_area_name": "default",
+    }
+    monkeypatch.setattr(
+        "src.integrations.prodigi.fulfillment.workflow.ProdigiFulfillmentQualityService",
+        _FakeQualityService,
+    )
+
+    item = _build_order_item()
+    order = _build_order(item)
+    db_session = _FakeDbSession(order=order)
+    result = await ProdigiFulfillmentWorkflow(db_session).run_preflight(
+        order,
+        commit=False,
+    )
+
+    assert result.passed is False
+    assert result.request_payload is None
+    assert _FakeQualityService.persisted_order_gates[-1].gate == "callback_url_public_https"
+    assert _FakeQualityService.persisted_order_gates[-1].status == "failed"
 
 
 @pytest.mark.asyncio
@@ -378,6 +408,61 @@ async def test_submit_ready_order_does_not_create_duplicate_when_already_submitt
     assert existing_job.status_stage == "InProgress"
     assert item.prodigi_order_item_id == "remote-item-11"
     assert item.prodigi_asset_id == "remote-asset-1"
+
+
+@pytest.mark.asyncio
+async def test_poll_status_persists_status_snapshot_and_audit_event(monkeypatch):
+    _FakeQualityService.events = []
+    _FakeProdigiClient.order_response = {
+        "order": {
+            "id": "ord_test_123",
+            "status": {"stage": "Complete", "details": {"message": "done"}, "issues": []},
+            "items": [
+                {
+                    "id": "remote-item-11",
+                    "merchantReference": "artshop-order-101-item-11",
+                    "status": "Complete",
+                    "assets": [{"id": "remote-asset-1"}],
+                }
+            ],
+        }
+    }
+    monkeypatch.setattr(
+        "src.integrations.prodigi.fulfillment.workflow.ProdigiClient", _FakeProdigiClient
+    )
+    monkeypatch.setattr(
+        "src.integrations.prodigi.fulfillment.workflow.ProdigiFulfillmentQualityService",
+        _FakeQualityService,
+    )
+
+    item = _build_order_item()
+    order = _build_order(item)
+    job = SimpleNamespace(
+        id=5,
+        order_id=101,
+        status="submitted",
+        prodigi_order_id="ord_test_123",
+        latest_status_payload=None,
+        response_payload=None,
+        trace_parent=None,
+        status_stage=None,
+        status_details=None,
+        issues=None,
+        submitted_at=None,
+        last_error=None,
+    )
+    db_session = _FakeDbSession(order=order, latest_job=job)
+
+    payload = await ProdigiFulfillmentWorkflow(db_session).poll_status(job, order=order)
+
+    assert payload == _FakeProdigiClient.order_response
+    assert job.status == "complete"
+    assert job.status_stage == "Complete"
+    assert job.latest_status_payload["id"] == "ord_test_123"
+    assert item.prodigi_order_item_id == "remote-item-11"
+    assert _FakeQualityService.events[-1]["event_type"] == "api_response"
+    assert _FakeQualityService.events[-1]["stage"] == "status_poll"
+    assert _FakeQualityService.events[-1]["response_payload"] == payload
 
 
 def test_resolve_category_id_falls_back_for_legacy_finish_labels():

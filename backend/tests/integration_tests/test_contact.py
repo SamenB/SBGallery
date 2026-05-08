@@ -6,7 +6,7 @@ from httpx import AsyncClient
 class TestContactForm:
     """Integration tests for the contact form submission API."""
 
-    @patch("src.api.contact.send_contact_emails")
+    @patch("src.services.contact.send_contact_emails")
     async def test_submit_contact_form_success(self, mock_send, ac: AsyncClient, db):
         """POST /contact with valid data should trigger background email task."""
         # Ensure site settings exist (autouse fixture setup_database handles this usually,
