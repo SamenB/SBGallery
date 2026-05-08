@@ -125,14 +125,10 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
 
     return (
         <div
-            onClick={onClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
             className="art-card magnetic-scroll"
             style={{
                 display: "flex", flexDirection: "column",
-                cursor: "pointer", width: "100%",
+                width: "100%",
                 background: "none", border: "none", margin: 0,
                 textAlign: "left", pointerEvents: "auto", padding: 0,
                 /* Unified scale: image + text move as one glass plate */
@@ -145,6 +141,10 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
             <div
                 ref={containerRef}
                 className="art-card-container"
+                role="button"
+                tabIndex={0}
+                onClick={onClick}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
                 style={{
                     position: "relative",
                     width: "100%",
@@ -154,7 +154,8 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                     justifyContent: "center",
                     flexShrink: 0,
                     zIndex: 10,
-                    pointerEvents: "none",
+                    pointerEvents: "auto",
+                    cursor: "pointer",
                 }}
             >
                 {imgSrc ? (

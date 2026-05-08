@@ -10,7 +10,7 @@ FastAPI · Next.js · PostgreSQL · Redis · Celery · Docker · CI/CD
 [![CD](https://github.com/SamenB/ArtShop/actions/workflows/cd.yml/badge.svg)](https://github.com/SamenB/ArtShop/actions/workflows/cd.yml)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-lightgrey.svg)](LICENSE)
 
 </div>
 

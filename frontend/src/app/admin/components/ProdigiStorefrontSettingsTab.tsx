@@ -1,343 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { Database, Play, RefreshCcw, Save } from "lucide-react";
-
-import { apiFetch, apiJson, getApiUrl } from "@/utils";
-
-type ShippingPolicy = {
-  checkout_shipping_cap: number;
-  preferred_tier_order: string[];
-  fallback_when_none_under_cap: string;
-  fallback_tier: string;
-};
-
-type CategoryPolicy = Record<
-  string,
-  {
-    label: string;
-    fixed_attributes: Record<string, unknown>;
-    allowed_attributes: Record<string, unknown[]>;
-    recommended_defaults: Record<string, unknown>;
-    shipping: {
-      visible_methods?: string[];
-      preferred_order?: string[];
-      default_method?: string;
-    };
-    notes?: string[];
-  }
->;
-
-type SnapshotDefaults = {
-  paper_material: string;
-  include_notice_level: boolean;
-};
-
-type StorefrontSettingsPayload = {
-  defaults: {
-    shipping_policy: ShippingPolicy;
-    category_policy: CategoryPolicy;
-    snapshot_defaults: SnapshotDefaults;
-    payload_policy_version: string;
-  };
-  settings: {
-    updated_at?: string | null;
-  };
-  effective: {
-    shipping_policy: ShippingPolicy;
-    category_policy: CategoryPolicy;
-    snapshot_defaults: SnapshotDefaults;
-    payload_policy_version: string;
-  };
-  status: {
-    active_bake?: {
-      id: number;
-      bake_key: string;
-      paper_material: string;
-      include_notice_level: boolean;
-      ratio_count: number;
-      country_count: number;
-      offer_group_count: number;
-      offer_size_count: number;
-    } | null;
-    materialized_payload_count: number;
-  };
-};
-
-type ProductionPrepareDecision = {
-  prepare_needed: boolean;
-  status: string;
-  reasons: string[];
-  source?: {
-    path?: string;
-    sha256?: string;
-    rows_seen?: number;
-    size_bytes?: number;
-    error?: string;
-  } | null;
-  active_bake?: {
-    id?: number;
-    bake_key?: string;
-    status?: string;
-    source_sha256?: string;
-    source_row_count?: number;
-    source_size_bytes?: number;
-    pipeline_version?: string;
-    policy_version?: string;
-    offer_group_count?: number;
-    offer_size_count?: number;
-    settings?: {
-      payload_policy_version?: string;
-    } | null;
-  } | null;
-  materialized_payload_count: number;
-  expected: {
-    pipeline_version?: string;
-    policy_version?: string;
-  };
-};
-
-type ProductionPrepareResult = {
-  status: string;
-  decision: ProductionPrepareDecision;
-  refreshed_decision?: ProductionPrepareDecision;
-  settings?: StorefrontSettingsPayload;
-  report?: {
-    status?: string;
-    validation?: {
-      approved?: boolean;
-      summary?: Record<string, unknown>;
-    };
-    cache_clear?: Record<string, unknown>;
-    csv_rebuild?: Record<string, unknown> | null;
-  } | null;
-};
-
-type CategoryDraft = {
-  fixed: string;
-  allowed: string;
-  recommended: string;
-  visibleMethods: string;
-  preferredOrder: string;
-  defaultMethod: string;
-};
-
-const tierOptions = ["overnight", "express", "standardplus", "standard", "budget"];
-const fallbackModes = ["standard_then_cheapest", "cheapest", "block"];
-
-function joinList(value?: string[]) {
-  return (value || []).join(", ");
-}
-
-function splitList(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function asPrettyJson(value: unknown) {
-  return JSON.stringify(value ?? {}, null, 2);
-}
-
-function parseObject(value: string, label: string) {
-  const parsed = JSON.parse(value || "{}");
-  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
-    throw new Error(`${label} must be a JSON object.`);
-  }
-  return parsed as Record<string, unknown>;
-}
-
-function formatNumber(value: number | undefined) {
-  return typeof value === "number" ? value.toLocaleString() : "Unknown";
-}
-
-function formatDecision(decision: ProductionPrepareDecision | null) {
-  if (!decision) return "Loading";
-  return decision.prepare_needed ? "Needed" : "Current";
-}
-
-function formatPrepareMessage(result: ProductionPrepareResult) {
-  if (result.status === "skipped") {
-    return "Production prepare skipped because the active snapshot is current.";
-  }
-  if (result.report?.status === "ready") {
-    return "Production prepare completed: snapshot, payloads, validation, and cache clear are ready.";
-  }
-  return "Production prepare completed with failed validation. Check the report before relying on the snapshot.";
-}
+import { RefreshCcw, Save } from "lucide-react";
+import {
+  ActivePayloadStatus,
+  PolicyDefaultsPanel,
+  ProductionPreparePanel,
+} from "./prodigiStorefrontSettings.sections";
+import { CategoryPolicyList } from "./prodigiStorefrontSettings.categoryPolicy";
+import { useProdigiStorefrontSettings } from "./useProdigiStorefrontSettings";
 
 export default function ProdigiStorefrontSettingsTab() {
-  const [payload, setPayload] = useState<StorefrontSettingsPayload | null>(null);
-  const [shippingPolicy, setShippingPolicy] = useState<ShippingPolicy | null>(null);
-  const [snapshotDefaults, setSnapshotDefaults] = useState<SnapshotDefaults | null>(null);
-  const [payloadPolicyVersion, setPayloadPolicyVersion] = useState("");
-  const [categoryDrafts, setCategoryDrafts] = useState<Record<string, CategoryDraft>>({});
-  const [loading, setLoading] = useState(true);
-  const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [productionDecision, setProductionDecision] =
-    useState<ProductionPrepareDecision | null>(null);
-  const [includeApiChecks, setIncludeApiChecks] = useState(false);
-  const [includeQuotes, setIncludeQuotes] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const settings = useProdigiStorefrontSettings();
 
-  const categoryIds = useMemo(
-    () => Object.keys(payload?.effective.category_policy || {}),
-    [payload],
-  );
-
-  const applyPayload = useCallback((nextPayload: StorefrontSettingsPayload) => {
-    const effective = nextPayload.effective;
-    setPayload(nextPayload);
-    setShippingPolicy(effective.shipping_policy);
-    setSnapshotDefaults(effective.snapshot_defaults);
-    setPayloadPolicyVersion(effective.payload_policy_version);
-    setCategoryDrafts(
-      Object.fromEntries(
-        Object.entries(effective.category_policy).map(([categoryId, policy]) => [
-          categoryId,
-          {
-            fixed: asPrettyJson(policy.fixed_attributes),
-            allowed: asPrettyJson(policy.allowed_attributes),
-            recommended: asPrettyJson(policy.recommended_defaults),
-            visibleMethods: joinList(policy.shipping.visible_methods),
-            preferredOrder: joinList(policy.shipping.preferred_order),
-            defaultMethod: policy.shipping.default_method || "",
-          },
-        ]),
-      ),
-    );
-  }, []);
-
-  const loadSettings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await apiFetch(`${getApiUrl()}/v1/admin/prodigi/storefront-settings`);
-      applyPayload(await apiJson<StorefrontSettingsPayload>(response));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load storefront settings.");
-    } finally {
-      setLoading(false);
-    }
-  }, [applyPayload]);
-
-  const loadProductionStatus = useCallback(async () => {
-    try {
-      const response = await apiFetch(`${getApiUrl()}/v1/admin/prodigi/production-prepare`);
-      setProductionDecision(await apiJson<ProductionPrepareDecision>(response));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load production prepare status.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadSettings();
-    void loadProductionStatus();
-  }, [loadSettings, loadProductionStatus]);
-
-  const buildSaveBody = () => {
-    if (!shippingPolicy || !snapshotDefaults || !payload) {
-      throw new Error("Settings are not loaded yet.");
-    }
-    const categoryPolicy: CategoryPolicy = Object.fromEntries(
-      Object.entries(payload.effective.category_policy).map(([categoryId, policy]) => {
-        const draft = categoryDrafts[categoryId];
-        return [
-          categoryId,
-          {
-            ...policy,
-            fixed_attributes: parseObject(draft.fixed, `${categoryId}.fixed_attributes`),
-            allowed_attributes: parseObject(
-              draft.allowed,
-              `${categoryId}.allowed_attributes`,
-            ) as Record<string, unknown[]>,
-            recommended_defaults: parseObject(
-              draft.recommended,
-              `${categoryId}.recommended_defaults`,
-            ),
-            shipping: {
-              visible_methods: splitList(draft.visibleMethods),
-              preferred_order: splitList(draft.preferredOrder),
-              default_method: draft.defaultMethod.trim(),
-            },
-          },
-        ];
-      }),
-    );
-    return {
-      shipping_policy: shippingPolicy,
-      category_policy: categoryPolicy,
-      snapshot_defaults: snapshotDefaults,
-      payload_policy_version: payloadPolicyVersion.trim(),
-    };
-  };
-
-  const saveSettings = async () => {
-    setBusyAction("save");
-    setError(null);
-    setMessage(null);
-    try {
-      const response = await apiFetch(`${getApiUrl()}/v1/admin/prodigi/storefront-settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildSaveBody()),
-      });
-      applyPayload(await apiJson<StorefrontSettingsPayload>(response));
-      setMessage("Storefront settings saved.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save storefront settings.");
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const runProductionPrepare = async (force: boolean) => {
-    setBusyAction(force ? "prepare-force" : "prepare");
-    setError(null);
-    setMessage(null);
-    try {
-      const response = await apiFetch(`${getApiUrl()}/v1/admin/prodigi/production-prepare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          force,
-          include_api_checks: includeApiChecks,
-          include_quotes: includeQuotes,
-        }),
-      });
-      const result = await apiJson<ProductionPrepareResult>(response);
-      if (result.settings) {
-        applyPayload(result.settings);
-      } else {
-        await loadSettings();
-      }
-      setProductionDecision(result.refreshed_decision || result.decision);
-      setMessage(formatPrepareMessage(result));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Production prepare failed.");
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
-  const updateCategoryDraft = (
-    categoryId: string,
-    key: keyof CategoryDraft,
-    value: string,
-  ) => {
-    setCategoryDrafts((current) => ({
-      ...current,
-      [categoryId]: {
-        ...current[categoryId],
-        [key]: value,
-      },
-    }));
-  };
-
-  if (loading) {
+  if (settings.loading) {
     return (
       <div className="flex min-h-[280px] items-center justify-center text-sm font-semibold text-[#31323E]/50">
         Loading storefront settings...
@@ -345,40 +20,44 @@ export default function ProdigiStorefrontSettingsTab() {
     );
   }
 
-  if (!payload || !shippingPolicy || !snapshotDefaults) {
+  if (
+    !settings.payload ||
+    !settings.shippingPolicy ||
+    !settings.snapshotDefaults
+  ) {
     return (
       <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
-        {error || "Storefront settings are unavailable."}
+        {settings.error || "Storefront settings are unavailable."}
       </div>
     );
   }
-
-  const activeBake = payload.status.active_bake;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Storefront Settings</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Storefront Settings
+          </h2>
           <p className="mt-1 max-w-3xl text-sm font-medium leading-relaxed text-[#31323E]/52">
-            Runtime policy for Prodigi snapshot baking, materialized storefront payloads, and
-            checkout-visible shipping selection.
+            Runtime policy for Prodigi snapshot baking, materialized storefront
+            payloads, and checkout-visible shipping selection.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={saveSettings}
-            disabled={busyAction !== null}
+            onClick={settings.saveSettings}
+            disabled={settings.busyAction !== null}
             className="inline-flex items-center gap-2 rounded-md bg-[#31323E] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white disabled:opacity-45"
           >
             <Save size={15} />
-            {busyAction === "save" ? "Saving" : "Save"}
+            {settings.busyAction === "save" ? "Saving" : "Save"}
           </button>
           <button
             type="button"
-            onClick={loadProductionStatus}
-            disabled={busyAction !== null}
+            onClick={settings.loadProductionStatus}
+            disabled={settings.busyAction !== null}
             className="inline-flex items-center gap-2 rounded-md border border-[#31323E]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#31323E] disabled:opacity-45"
           >
             <RefreshCcw size={15} />
@@ -387,357 +66,40 @@ export default function ProdigiStorefrontSettingsTab() {
         </div>
       </div>
 
-      {(message || error) && (
+      {(settings.message || settings.error) && (
         <div
-          className={`rounded-md border px-4 py-3 text-sm font-semibold ${
-            error
-              ? "border-red-200 bg-red-50 text-red-700"
-              : "border-emerald-200 bg-emerald-50 text-emerald-800"
-          }`}
+          className={`rounded-md border px-4 py-3 text-sm font-semibold ${settings.error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
         >
-          {error || message}
+          {settings.error || settings.message}
         </div>
       )}
 
-      <section className="rounded-lg border border-[#31323E]/10 p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-bold">Active Payload Status</h3>
-            <p className="text-xs font-semibold text-[#31323E]/45">
-              Policy version {payload.effective.payload_policy_version}
-            </p>
-          </div>
-          <div className="text-right text-xs font-bold text-[#31323E]/55">
-            <div>{payload.status.materialized_payload_count} materialized payloads</div>
-            <div>{payload.settings.updated_at ? `Updated ${payload.settings.updated_at}` : "Not saved yet"}</div>
-          </div>
-        </div>
-        {activeBake ? (
-          <div className="grid gap-3 text-sm md:grid-cols-4">
-            <StatusMetric label="Bake" value={`#${activeBake.id}`} />
-            <StatusMetric label="Paper" value={activeBake.paper_material} />
-            <StatusMetric label="Countries" value={String(activeBake.country_count)} />
-            <StatusMetric label="Offer sizes" value={String(activeBake.offer_size_count)} />
-          </div>
-        ) : (
-          <p className="text-sm font-semibold text-[#31323E]/50">No active bake exists yet.</p>
-        )}
-      </section>
-
-      <section className="rounded-lg border border-[#31323E]/10 p-4">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-bold">Production Prepare</h3>
-            <p className="mt-1 text-xs font-semibold text-[#31323E]/45">
-              Curated CSV fingerprint, active bake, materialized payloads, validation, and cache clear.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => runProductionPrepare(false)}
-              disabled={busyAction !== null}
-              className="inline-flex items-center gap-2 rounded-md bg-[#31323E] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white disabled:opacity-45"
-            >
-              <Play size={15} />
-              {busyAction === "prepare" ? "Running" : "Run If Needed"}
-            </button>
-            <button
-              type="button"
-              onClick={() => runProductionPrepare(true)}
-              disabled={busyAction !== null}
-              className="inline-flex items-center gap-2 rounded-md border border-[#31323E]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#31323E] disabled:opacity-45"
-            >
-              <Database size={15} />
-              {busyAction === "prepare-force" ? "Running" : "Force Rebuild"}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 text-sm md:grid-cols-4">
-          <StatusMetric
-            label="Decision"
-            value={formatDecision(productionDecision)}
-          />
-          <StatusMetric
-            label="Reasons"
-            value={
-              productionDecision?.reasons.length
-                ? productionDecision.reasons.join(", ")
-                : "None"
-            }
-          />
-          <StatusMetric
-            label="CSV Rows"
-            value={formatNumber(productionDecision?.source?.rows_seen)}
-          />
-          <StatusMetric
-            label="Payloads"
-            value={formatNumber(productionDecision?.materialized_payload_count)}
-          />
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-md border border-[#31323E]/10 px-3 py-2 text-sm font-bold">
-            <input
-              type="checkbox"
-              checked={includeApiChecks}
-              onChange={(event) => setIncludeApiChecks(event.target.checked)}
-            />
-            Cross-check product details with Prodigi API
-          </label>
-          <label className="flex items-center gap-3 rounded-md border border-[#31323E]/10 px-3 py-2 text-sm font-bold">
-            <input
-              type="checkbox"
-              checked={includeQuotes}
-              onChange={(event) => setIncludeQuotes(event.target.checked)}
-            />
-            Include Prodigi quote checks
-          </label>
-        </div>
-
-        {productionDecision && (
-          <div className="mt-4 grid gap-3 text-xs font-semibold text-[#31323E]/55 md:grid-cols-2">
-            <div className="rounded-md bg-[#F7F7F5] px-3 py-2">
-              <div className="font-bold text-[#31323E]/70">Expected</div>
-              <div>Pipeline {productionDecision.expected.pipeline_version || "unknown"}</div>
-              <div>Policy {productionDecision.expected.policy_version || "unknown"}</div>
-            </div>
-            <div className="rounded-md bg-[#F7F7F5] px-3 py-2">
-              <div className="font-bold text-[#31323E]/70">Active Bake</div>
-              <div>{productionDecision.active_bake?.bake_key || "No active bake"}</div>
-              <div>
-                {productionDecision.active_bake?.offer_group_count || 0} groups /
-                {" "}
-                {productionDecision.active_bake?.offer_size_count || 0} sizes
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-[#31323E]/10 p-4">
-          <h3 className="text-lg font-bold">Shipping Policy</h3>
-          <div className="mt-4 grid gap-3">
-            <FieldLabel label="Checkout Cap">
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={shippingPolicy.checkout_shipping_cap}
-                onChange={(event) =>
-                  setShippingPolicy({
-                    ...shippingPolicy,
-                    checkout_shipping_cap: Number(event.target.value),
-                  })
-                }
-                className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-              />
-            </FieldLabel>
-            <FieldLabel label="Preferred Tier Order">
-              <input
-                value={joinList(shippingPolicy.preferred_tier_order)}
-                onChange={(event) =>
-                  setShippingPolicy({
-                    ...shippingPolicy,
-                    preferred_tier_order: splitList(event.target.value),
-                  })
-                }
-                className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-              />
-            </FieldLabel>
-            <div className="grid gap-3 md:grid-cols-2">
-              <FieldLabel label="Fallback Mode">
-                <select
-                  value={shippingPolicy.fallback_when_none_under_cap}
-                  onChange={(event) =>
-                    setShippingPolicy({
-                      ...shippingPolicy,
-                      fallback_when_none_under_cap: event.target.value,
-                    })
-                  }
-                  className="w-full rounded-md border border-[#31323E]/15 bg-white px-3 py-2 text-sm font-semibold"
-                >
-                  {fallbackModes.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {mode}
-                    </option>
-                  ))}
-                </select>
-              </FieldLabel>
-              <FieldLabel label="Fallback Tier">
-                <select
-                  value={shippingPolicy.fallback_tier}
-                  onChange={(event) =>
-                    setShippingPolicy({ ...shippingPolicy, fallback_tier: event.target.value })
-                  }
-                  className="w-full rounded-md border border-[#31323E]/15 bg-white px-3 py-2 text-sm font-semibold"
-                >
-                  {tierOptions.map((tier) => (
-                    <option key={tier} value={tier}>
-                      {tier}
-                    </option>
-                  ))}
-                </select>
-              </FieldLabel>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[#31323E]/10 p-4">
-          <h3 className="text-lg font-bold">Snapshot Defaults</h3>
-          <div className="mt-4 grid gap-3">
-            <FieldLabel label="Paper Material">
-              <input
-                value={snapshotDefaults.paper_material}
-                onChange={(event) =>
-                  setSnapshotDefaults({
-                    ...snapshotDefaults,
-                    paper_material: event.target.value,
-                  })
-                }
-                className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-              />
-            </FieldLabel>
-            <FieldLabel label="Payload Policy Version">
-              <input
-                value={payloadPolicyVersion}
-                onChange={(event) => setPayloadPolicyVersion(event.target.value)}
-                className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-              />
-            </FieldLabel>
-            <label className="flex items-center gap-3 rounded-md border border-[#31323E]/10 px-3 py-2 text-sm font-bold">
-              <input
-                type="checkbox"
-                checked={snapshotDefaults.include_notice_level}
-                onChange={(event) =>
-                  setSnapshotDefaults({
-                    ...snapshotDefaults,
-                    include_notice_level: event.target.checked,
-                  })
-                }
-              />
-              Include notice-level cross-border categories
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-lg font-bold">Category Storefront Policy</h3>
-          <p className="mt-1 text-xs font-semibold text-[#31323E]/45">
-            Fixed attributes, recommended defaults, allowed options, and visible shipping method hints.
-          </p>
-        </div>
-        {categoryIds.map((categoryId) => {
-          const policy = payload.effective.category_policy[categoryId];
-          const draft = categoryDrafts[categoryId];
-          if (!draft) return null;
-          return (
-            <div key={categoryId} className="rounded-lg border border-[#31323E]/10 p-4">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h4 className="text-base font-bold">{policy.label}</h4>
-                <span className="text-xs font-bold text-[#31323E]/40">{categoryId}</span>
-              </div>
-              <div className="grid gap-3 lg:grid-cols-3">
-                <JsonField
-                  label="Fixed Attributes"
-                  value={draft.fixed}
-                  onChange={(value) => updateCategoryDraft(categoryId, "fixed", value)}
-                />
-                <JsonField
-                  label="Recommended Defaults"
-                  value={draft.recommended}
-                  onChange={(value) => updateCategoryDraft(categoryId, "recommended", value)}
-                />
-                <JsonField
-                  label="Allowed Attributes"
-                  value={draft.allowed}
-                  onChange={(value) => updateCategoryDraft(categoryId, "allowed", value)}
-                />
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <FieldLabel label="Visible Methods">
-                  <input
-                    value={draft.visibleMethods}
-                    onChange={(event) =>
-                      updateCategoryDraft(categoryId, "visibleMethods", event.target.value)
-                    }
-                    className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-                  />
-                </FieldLabel>
-                <FieldLabel label="Preferred Order">
-                  <input
-                    value={draft.preferredOrder}
-                    onChange={(event) =>
-                      updateCategoryDraft(categoryId, "preferredOrder", event.target.value)
-                    }
-                    className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-                  />
-                </FieldLabel>
-                <FieldLabel label="Default Method">
-                  <input
-                    value={draft.defaultMethod}
-                    onChange={(event) =>
-                      updateCategoryDraft(categoryId, "defaultMethod", event.target.value)
-                    }
-                    className="w-full rounded-md border border-[#31323E]/15 px-3 py-2 text-sm font-semibold"
-                  />
-                </FieldLabel>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-    </div>
-  );
-}
-
-function StatusMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-[#F7F7F5] px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#31323E]/38">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-sm font-bold text-[#31323E]">{value}</div>
-    </div>
-  );
-}
-
-function FieldLabel({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#31323E]/38">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function JsonField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.16em] text-[#31323E]/38">
-        {label}
-      </span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={7}
-        spellCheck={false}
-        className="w-full resize-y rounded-md border border-[#31323E]/15 bg-[#FAFAF8] px-3 py-2 font-mono text-xs leading-relaxed text-[#31323E]"
+      <ActivePayloadStatus payload={settings.payload} />
+      <ProductionPreparePanel
+        busyAction={settings.busyAction}
+        productionDecision={settings.productionDecision}
+        includeApiChecks={settings.includeApiChecks}
+        setIncludeApiChecks={settings.setIncludeApiChecks}
+        includeQuotes={settings.includeQuotes}
+        setIncludeQuotes={settings.setIncludeQuotes}
+        runProductionPrepare={(force) =>
+          void settings.runProductionPrepare(force)
+        }
       />
-    </label>
+      <PolicyDefaultsPanel
+        shippingPolicy={settings.shippingPolicy}
+        setShippingPolicy={settings.setShippingPolicy}
+        snapshotDefaults={settings.snapshotDefaults}
+        setSnapshotDefaults={settings.setSnapshotDefaults}
+        payloadPolicyVersion={settings.payloadPolicyVersion}
+        setPayloadPolicyVersion={settings.setPayloadPolicyVersion}
+      />
+      <CategoryPolicyList
+        payload={settings.payload}
+        categoryIds={settings.categoryIds}
+        categoryDrafts={settings.categoryDrafts}
+        updateCategoryDraft={settings.updateCategoryDraft}
+      />
+    </div>
   );
 }

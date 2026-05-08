@@ -1,0 +1,173 @@
+.hero-link {
+  color: var(--color-cream);
+  border-color: rgba(250, 250, 247, 0.4);
+}
+.hero-link:hover {
+  border-color: var(--color-cream);
+}
+.hero-shop-link {
+  color: rgba(250, 250, 247, 0.6);
+  border-color: transparent;
+}
+.hero-shop-link:hover {
+  color: var(--color-cream);
+  border-color: rgba(250, 250, 247, 0.2);
+}
+.home-section-link {
+  color: var(--color-charcoal-mid);
+  border-color: var(--color-border-dark);
+}
+.home-section-link:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.home-about-link {
+  color: var(--color-charcoal);
+  border-color: rgba(26, 26, 24, 0.4);
+}
+.home-about-link:hover {
+  border-color: var(--color-charcoal);
+}
+.home-art-card {
+  transform: translateY(0);
+}
+.home-art-card .home-img-inner {
+  transform: scale(1);
+}
+.home-art-card .home-shadow-box {
+  box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .home-art-card:hover {
+    transform: translateY(-6px);
+  }
+  .home-art-card:hover .home-img-inner {
+    transform: scale(1.02);
+  }
+  .home-art-card:hover .home-shadow-box {
+    box-shadow: none;
+  }
+}
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  padding: 0.35rem 0.2rem;
+  user-select: none;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.filter-item:hover {
+  background-color: rgba(26, 26, 24, 0.04);
+}
+.filter-item:hover .filter-item-box {
+  border-color: rgba(26, 26, 24, 0.5) !important;
+}
+.filter-item:hover .filter-item-text {
+  color: #3a3a38 !important;
+}
+.filter-section-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0.9rem 0 0.6rem;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.filter-section-btn:hover {
+  background-color: rgba(26, 26, 24, 0.025);
+}
+.filter-section-btn:hover .filter-section-title {
+  color: #000 !important;
+}
+.filter-section-btn:hover .filter-section-arrow path {
+  stroke: #888;
+}
+@media (max-width: 1023px) {
+  .shop-desktop-sidebar {
+    display: none !important;
+  }
+}
+@media (max-width: 1023px) {
+  @keyframes magnetic-pull {
+    from {
+      transform: translateY(36px) scale(0.97);
+    }
+    to {
+      transform: translateY(0) scale(1);
+    }
+  }
+  .magnetic-scroll {
+    transform: translateY(0);
+  }
+  @supports (animation-timeline: view()) {
+    .magnetic-scroll {
+      animation: magnetic-pull linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+    .no-scroll-anim {
+      animation: none !important;
+      transform: translateY(0) !important;
+      opacity: 1 !important;
+    }
+  }
+}
+.premium-cta-btn {
+  @apply text-white bg-gradient-to-br from-[#ec4899] to-[#fb923c] hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-base px-6 py-3 text-center transition-all duration-300;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+}
+.premium-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+}
+.premium-cta-btn:active {
+  transform: translateY(0);
+}
+.premium-cta-btn:disabled {
+  @apply from-gray-300 to-gray-400 cursor-not-allowed opacity-70 transform-none shadow-none;
+}
+.status-stamp {
+  position: absolute;
+  top: 15px;
+  right: -32px;
+  transform: rotate(45deg);
+  padding: 4px 35px;
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  white-space: nowrap;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+@media (max-width: 768px) {
+  .status-stamp {
+    top: 10px;
+    right: -28px;
+    padding: 3px 30px;
+    font-size: 0.55rem;
+  }
+}
+a,
+button,
+img {
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+a:active,
+a:focus {
+  background-color: transparent !important;
+}

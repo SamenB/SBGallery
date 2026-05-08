@@ -95,7 +95,8 @@ Target split:
 
 Rules:
 
-- Do not grow large mixed files when a small extraction is practical.
+- Treat frontend file size as an architecture signal, not a hard law: up to 250 lines is normally fine; 250-400 lines needs a responsibility check for mixed UI, API calls, mapping, validation, and orchestration; 400-500 lines should usually be split unless cohesion is clear; 500+ lines should be avoided without an explicit reason.
+- Route/page files stay thin: routing, URL state, data orchestration, and high-level layout only. Do not put DTO definitions, backend payload builders, formatter clusters, or reusable JSX blocks directly in pages.
 - Avoid `any`; use exact DTOs or `unknown` with narrowing.
 - Use `apiFetch` plus `apiJson` for backend JSON calls.
 - Do not duplicate backend business calculations in React. Frontend formats and presents.

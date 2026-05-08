@@ -1,83 +1,48 @@
-/* ─────────────────────────────────────────────
-   Google Fonts — DM Serif Display + Cormorant Garamond + IBM Plex Mono + Inter
-   DM Serif      = elegant editorial serif, Le Labo feel
-   Cormorant     = label-style condensed for collection titles
-   IBM Plex Mono = typewriter label text (sizes, prices, metadata)
-   Inter         = clean sans-serif for body
-   Licorice      = premium calligraphic script for artwork titles (self-hosted)
-───────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=IBM+Plex+Mono:wght@300;400&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
-/* Licorice — self-hosted for guaranteed rendering */
+/* ───────────────────────────────────────────── Google Fonts — DM Serif Display + Cormorant Garamond + IBM Plex Mono + Inter DM Serif      = elegant editorial serif, Le Labo feel Cormorant     = label-style condensed for collection titles IBM Plex Mono = typewriter label text (sizes, prices, metadata) Inter         = clean sans-serif for body Licorice      = premium calligraphic script for artwork titles (self-hosted) ───────────────────────────────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=IBM+Plex+Mono:wght@300;400&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"); /* Licorice — self-hosted for guaranteed rendering */
+@import "./styles/ui-patterns.css";
 @font-face {
-  font-family: 'Licorice';
+  font-family: "Licorice";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/Licorice-Regular.ttf') format('truetype');
+  src: url("/fonts/Licorice-Regular.ttf") format("truetype");
 }
-
-@import "tailwindcss";
-
-/* ─────────────────────────────────────────────
-   Design Tokens — Le Labo / Santal 33 language
-   Warm parchment, near-black, no decoration
-───────────────────────────────────────────── */
+@import "tailwindcss"; /* ───────────────────────────────────────────── Design Tokens — Le Labo / Santal 33 language Warm parchment, near-black, no decoration ───────────────────────────────────────────── */
 @theme {
   /* Modern Gray palette — strict gray, no warmth */
-  --color-cream: #F4F4F4;
-  /* base gray */
-  --color-cream-dark: #E8E8E8;
-  /* slightly deeper gray */
-  --color-charcoal: #111111;
-  /* near-black for text */
-  --color-charcoal-mid: #4A4A4A;
-  /* mid-tone gray */
-  --color-muted: #808080;
-  /* gray for captions */
-  --color-accent: #111111;
-  /* accent = black label */
+  --color-cream: #f4f4f4; /* base gray */
+  --color-cream-dark: #e8e8e8; /* slightly deeper gray */
+  --color-charcoal: #111111; /* near-black for text */
+  --color-charcoal-mid: #4a4a4a; /* mid-tone gray */
+  --color-muted: #808080; /* gray for captions */
+  --color-accent: #111111; /* accent = black label */
   --color-accent-dark: #000000;
-  --color-border: rgba(17, 17, 17, 0.10);
-  /* hairline */
-  --color-border-dark: rgba(17, 17, 17, 0.22);
-  /* stronger line */
-  --color-sold: #666666;
-  /* dark gray for sold */
-  --color-available: #333333;
-  /* deep gray for available */
-
-  /* Typography */
-  --font-serif: 'DM Serif Display', Georgia, serif;
+  --color-border: rgba(17, 17, 17, 0.1); /* hairline */
+  --color-border-dark: rgba(17, 17, 17, 0.22); /* stronger line */
+  --color-sold: #666666; /* dark gray for sold */
+  --color-available: #333333; /* deep gray for available */ /* Typography */
+  --font-serif: "DM Serif Display", Georgia, serif;
   /* headings, logo */
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  /* collection labels */
-  --font-sans: 'Inter', system-ui, sans-serif;
-  /* body copy */
-  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
-  /* typewriter labels — Le Labo printed form style */
-  --font-price: 'Space Grotesk', system-ui, sans-serif;
-  /* Trendy 2026 geometric font for numbers/prices */
-  --font-artwork-title: 'Licorice', cursive;
-  /* premium calligraphic script — artwork page titles */
-
+  --font-display: "Cormorant Garamond", Georgia, serif; /* collection labels */
+  --font-sans: "Inter", system-ui, sans-serif; /* body copy */
+  --font-mono:
+    "IBM Plex Mono", "Courier New", monospace; /* typewriter labels — Le Labo printed form style */
+  --font-price:
+    "Space Grotesk", system-ui, sans-serif; /* Trendy 2026 geometric font for numbers/prices */
+  --font-artwork-title:
+    "Licorice", cursive; /* premium calligraphic script — artwork page titles */
   --spacing-section: 6rem;
-}
-
-/* ─────────────────────────────────────────────
-   Global Base Styles
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Global Base Styles ───────────────────────────────────────────── */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
-
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
 }
-
 body {
   /* Le Labo parchment background */
   background-color: var(--color-cream);
@@ -89,18 +54,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* ─────────────────────────────────────────────
-   Premium Paper Texture Overlay
-   Uses SVG feTurbulence for organic grain on top of the base color.
-   Applied to the shop page wrapper via .premium-texture-bg
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Premium Paper Texture Overlay Uses SVG feTurbulence for organic grain on top of the base color. Applied to the shop page wrapper via .premium-texture-bg ───────────────────────────────────────────── */
 .premium-texture-bg {
   position: relative;
   background-color: var(--color-cream);
 }
-
 .premium-texture-bg::before {
   content: "";
   position: fixed;
@@ -112,21 +70,11 @@ body {
   background-repeat: repeat;
   background-size: 256px 256px;
   mix-blend-mode: multiply;
-}
-
-/* Ensure all direct children sit above the texture overlay */
+} /* Ensure all direct children sit above the texture overlay */
 .premium-texture-bg > * {
   position: relative;
   z-index: 1;
-}
-
-/* ─────────────────────────────────────────────
-   Liquid Glass — Apple-inspired frosted refraction card
-   Uses backdrop-filter blur + specular highlight pseudo-elements
-   to create a tactile, light-bending glass surface.
-   NOTE: overflow must NOT be hidden — the card uses paddingTop
-   taller than visible content to push text below the image.
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Liquid Glass — Apple-inspired frosted refraction card Uses backdrop-filter blur + specular highlight pseudo-elements to create a tactile, light-bending glass surface. NOTE: overflow must NOT be hidden — the card uses paddingTop taller than visible content to push text below the image. ───────────────────────────────────────────── */
 .liquid-glass-card {
   background: rgba(220, 220, 225, 0.45) !important;
   backdrop-filter: blur(20px) saturate(1.5);
@@ -141,9 +89,7 @@ body {
     0 1px 0 rgba(255, 255, 255, 0.65) inset,
     0 -1px 0 rgba(0, 0, 0, 0.04) inset;
   isolation: isolate;
-}
-
-/* Top specular highlight — simulates light catching the upper rim of curved glass */
+} /* Top specular highlight — simulates light catching the upper rim of curved glass */
 .liquid-glass-card::before {
   content: "";
   position: absolute;
@@ -160,9 +106,7 @@ body {
   );
   pointer-events: none;
   z-index: 2;
-}
-
-/* Bottom edge refraction glow — prismatic rainbow shimmer along the lower rim */
+} /* Bottom edge refraction glow — prismatic rainbow shimmer along the lower rim */
 .liquid-glass-card::after {
   content: "";
   position: absolute;
@@ -183,119 +127,92 @@ body {
   );
   pointer-events: none;
   z-index: 2;
-}
-
-
-/* ─────────────────────────────────────────────
-   Typography helpers
-   h1-h3 → DM Serif Display (editorial, Le Labo feel)
-   .font-sans → Inter (body)
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Typography helpers h1-h3 → DM Serif Display (editorial, Le Labo feel) .font-sans → Inter (body) ───────────────────────────────────────────── */
 h1,
 h2,
 h3 {
   font-family: var(--font-serif);
   line-height: 1.2;
   letter-spacing: -0.01em;
-  font-weight: 400;
-  /* DM Serif Display looks best at regular weight */
-}
-
-/* ─────────────────────────────────────────────
-   Premium Numbers Font — Trendy 2026 Geometric
-───────────────────────────────────────────── */
+  font-weight: 400; /* DM Serif Display looks best at regular weight */
+} /* ───────────────────────────────────────────── Premium Numbers Font — Trendy 2026 Geometric ───────────────────────────────────────────── */
 .font-price {
   font-family: var(--font-price) !important;
   font-style: normal !important;
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -0.02em;
-}
-
-/* ─────────────────────────────────────────────
-   Custom selection color
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Custom selection color ───────────────────────────────────────────── */
 ::selection {
   background-color: var(--color-accent);
   color: var(--color-cream);
-}
-
-/* ─────────────────────────────────────────────
-   Scrollbar styling (webkit browsers)
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Scrollbar styling (webkit browsers) ───────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: var(--color-cream-dark);
 }
-
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-dark);
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
-}
-
-/* ─────────────────────────────────────────────
-   Utility animations
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Utility animations ───────────────────────────────────────────── */
 @keyframes fadeUp {
   from {
     opacity: 0;
     transform: translateY(24px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
 }
-
+@keyframes scrollPulse {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(0.6);
+    opacity: 1;
+  }
+}
 @keyframes shimmer {
   0% {
     background-position: -1000px 0;
   }
-
   100% {
     background-position: 1000px 0;
   }
 }
-
 .animate-fade-up {
-  /* animation-fill-mode: forwards means the element keeps the final keyframe state */
-  /* (opacity:1, translateY:0) even after the animation finishes */
-  /* Without this, after animation ends on iOS, element can flash back to opacity:0 */
+  /* animation-fill-mode: forwards means the element keeps the final keyframe state */ /* (opacity:1, translateY:0) even after the animation finishes */ /* Without this, after animation ends on iOS, element can flash back to opacity:0 */
   animation: fadeUp 0.6s ease forwards;
 }
-
 .animate-fade-in {
   animation: fadeIn 0.4s ease forwards;
-}
-
-/* Loading skeleton shimmer */
+} /* Loading skeleton shimmer */
 .skeleton {
-  background: linear-gradient(90deg,
-      var(--color-cream-dark) 25%,
-      var(--color-border) 50%,
-      var(--color-cream-dark) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-cream-dark) 25%,
+    var(--color-border) 50%,
+    var(--color-cream-dark) 75%
+  );
   background-size: 1000px 100%;
   animation: shimmer 1.5s infinite linear;
-}
-
-/* Subtle single-run shimmer across an element (e.g. grid mode toggle buttons) */
+} /* Subtle single-run shimmer across an element (e.g. grid mode toggle buttons) */
 @keyframes sweep-shine {
   0% {
     transform: translateX(-150%) skewX(-25deg);
@@ -312,14 +229,12 @@ h3 {
     opacity: 0;
   }
 }
-
 .grid-toggle-wrapper {
   position: relative;
   overflow: hidden;
 }
-
 .grid-toggle-wrapper::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -333,87 +248,63 @@ h3 {
   );
   transform: translateX(-150%) skewX(-25deg);
   pointer-events: none;
-  animation: sweep-shine 1.6s cubic-bezier(0.4, 0.0, 0.2, 1) 0.7s forwards;
+  animation: sweep-shine 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.7s forwards;
   z-index: 10;
-}
-
-/* Art grid — mobile override for edge-to-edge single column or 3-col dense */
+} /* Art grid — mobile override for edge-to-edge single column or 3-col dense */
 @media (max-width: 600px) {
-
   /* Fixed height text block ensures grid correctly aligns images by center regardless of text wrapping */
   .art-grid.dense .art-card {
     height: auto !important;
   }
-
   .art-grid.dense .art-card p:first-child {
-    padding-bottom: 0.15rem !important;
-    /* Prevents italic descenders from getting cropped by overflow: hidden */
+    padding-bottom: 0.15rem !important; /* Prevents italic descenders from getting cropped by overflow: hidden */
   }
 }
-
 .art-card-container {
   /* Shadow applied via inline style to bypass Tailwind v4 PostCSS filter transformation */
   transition: filter 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   background-color: transparent;
-}
-
-/* Mobile proportional bounds — eliminating large gaps between image and description */
+} /* Mobile proportional bounds — eliminating large gaps between image and description */
 @media (max-width: 768px) {
-
   /* Let text scale proportionally with the width of the card's column */
   .art-card {
     container-type: inline-size;
   }
-
   .art-card-container {
     margin-bottom: 0.1rem;
   }
-
 }
-
 .art-card-inner {
   /* Box-shadow transition for hover shadow enhancement */
   transition: box-shadow 0.2s ease-out;
-}
-
-/* ─────────────────────────────────────────────
-   Unified card shadow — used across gallery, shop, artwork page
-   Apply via className="card-shadow" or boxShadow: "var(--shadow-card)"
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Unified card shadow — used across gallery, shop, artwork page Apply via className="card-shadow" or boxShadow: "var(--shadow-card)" ───────────────────────────────────────────── */
 :root {
-  --shadow-card: 2px 10px 28px rgba(28, 25, 22, 0.45), 0 3px 8px rgba(28, 25, 22, 0.22);
-  --shadow-card-hover: 4px 18px 40px rgba(28, 25, 22, 0.58), 0 4px 10px rgba(28, 25, 22, 0.32);
-  --shadow-card-deep: 2px 10px 28px rgba(28, 25, 22, 0.58), 0 3px 8px rgba(28, 25, 22, 0.32);
-  --shadow-thumb: 1px 4px 10px rgba(28, 25, 22, 0.28), 0 1px 3px rgba(28, 25, 22, 0.15);
-  --shadow-panel: 0 8px 24px rgba(28, 25, 22, 0.18), 0 2px 8px rgba(28, 25, 22, 0.10);
+  --shadow-card:
+    2px 10px 28px rgba(28, 25, 22, 0.45), 0 3px 8px rgba(28, 25, 22, 0.22);
+  --shadow-card-hover:
+    4px 18px 40px rgba(28, 25, 22, 0.58), 0 4px 10px rgba(28, 25, 22, 0.32);
+  --shadow-card-deep:
+    2px 10px 28px rgba(28, 25, 22, 0.58), 0 3px 8px rgba(28, 25, 22, 0.32);
+  --shadow-thumb:
+    1px 4px 10px rgba(28, 25, 22, 0.28), 0 1px 3px rgba(28, 25, 22, 0.15);
+  --shadow-panel:
+    0 8px 24px rgba(28, 25, 22, 0.18), 0 2px 8px rgba(28, 25, 22, 0.1);
 }
-
 .card-shadow {
   box-shadow: none;
   transition: transform 0.2s ease;
 }
-
 .card-shadow:hover {
   box-shadow: none;
-}
-
-/* Hover + active — only on real pointer devices (mouse/trackpad).
-   On touch: :active fires on ANY finger contact incl. scroll start → causes jerk. */
-  /* Scale is now driven by React state (imgHovered) — only fires
-     when mouse enters actual artwork pixels, not the card box.
-     Shadow enhancement is also handled inline. */
+} /* Hover + active — only on real pointer devices (mouse/trackpad). On touch: :active fires on ANY finger contact incl. scroll start → causes jerk. */ /* Scale is now driven by React state (imgHovered) — only fires when mouse enters actual artwork pixels, not the card box. Shadow enhancement is also handled inline. */
 @media (hover: hover) and (pointer: fine) {
   .art-card-inner:active {
     transform: scale(0.98);
-    box-shadow: 1px 5px 15px rgba(28, 25, 22, 0.80), 0 1px 5px rgba(28, 25, 22, 0.44) !important;
+    box-shadow:
+      1px 5px 15px rgba(28, 25, 22, 0.8),
+      0 1px 5px rgba(28, 25, 22, 0.44) !important;
   }
-}
-
-/* ─────────────────────────────────────────────
-   Suppress browser focus-visible outline on artwork
-   cards and buttons to eliminate white pixel halo.
-   These elements use custom JS-driven hover feedback.
-───────────────────────────────────────────── */
+} /* ───────────────────────────────────────────── Suppress browser focus-visible outline on artwork cards and buttons to eliminate white pixel halo. These elements use custom JS-driven hover feedback. ───────────────────────────────────────────── */
 .art-card,
 .art-card:focus,
 .art-card:focus-visible,
@@ -426,255 +317,13 @@ h3 {
   -webkit-touch-callout: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+} /* Also suppress on plain <img> focus states */
+img:focus {
+  outline: none;
 }
-/* Also suppress on plain <img> focus states */
-img:focus { outline: none; }
-
 .art-card-info,
 .art-card-info p,
 .art-card-info span {
   user-select: text !important;
   -webkit-user-select: text !important;
-}
-
-
-/* ─────────────────────────────────────────────
-   Home Page specific hover states (Replaces JS onMouseEnter)
-───────────────────────────────────────────── */
-.hero-link {
-  color: var(--color-cream);
-  border-color: rgba(250, 250, 247, 0.4);
-}
-
-.hero-link:hover {
-  border-color: var(--color-cream);
-}
-
-.hero-shop-link {
-  color: rgba(250, 250, 247, 0.6);
-  border-color: transparent;
-}
-
-.hero-shop-link:hover {
-  color: var(--color-cream);
-  border-color: rgba(250, 250, 247, 0.2);
-}
-
-.home-section-link {
-  color: var(--color-charcoal-mid);
-  border-color: var(--color-border-dark);
-}
-
-.home-section-link:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.home-about-link {
-  color: var(--color-charcoal);
-  border-color: rgba(26, 26, 24, 0.4);
-}
-
-.home-about-link:hover {
-  border-color: var(--color-charcoal);
-}
-
-.home-art-card {
-  transform: translateY(0);
-}
-
-.home-art-card .home-img-inner {
-  transform: scale(1);
-}
-
-.home-art-card .home-shadow-box {
-  box-shadow: none;
-}
-
-/* Home page art card hover — pointer devices only */
-@media (hover: hover) and (pointer: fine) {
-  .home-art-card:hover {
-    transform: translateY(-6px);
-  }
-
-  .home-art-card:hover .home-img-inner {
-    transform: scale(1.02);
-  }
-
-  .home-art-card:hover .home-shadow-box {
-    box-shadow: none;
-  }
-}
-
-/* ─────────────────────────────────────────────
-   Filter sidebar hover states
-   NOTE: NOT behind (hover: hover) — iPad is classified as hover:none
-   even with Apple Pencil. Instead we use plain :hover which Safari
-   correctly triggers for Apple Pencil proximity (iPadOS 16.4+)
-   AND (any-hover: hover) which matches if *any* device supports hover.
-───────────────────────────────────────────── */
-
-/* Filter checkbox row */
-.filter-item {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  cursor: pointer;
-  padding: 0.35rem 0.2rem;
-  user-select: none;
-  border-radius: 4px;
-  transition: background-color 0.12s ease;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-.filter-item:hover {
-  background-color: rgba(26, 26, 24, 0.04);
-}
-
-.filter-item:hover .filter-item-box {
-  border-color: rgba(26, 26, 24, 0.5) !important;
-}
-
-.filter-item:hover .filter-item-text {
-  color: #3a3a38 !important;
-}
-
-/* Filter section header button */
-.filter-section-btn {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: none;
-  border: none;
-  padding: 0.9rem 0 0.6rem;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: background-color 0.12s ease;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-.filter-section-btn:hover {
-  background-color: rgba(26, 26, 24, 0.025);
-}
-
-.filter-section-btn:hover .filter-section-title {
-  color: #000 !important;
-}
-
-.filter-section-btn:hover .filter-section-arrow path {
-  stroke: #888;
-}
-
-/* Hide desktop sidebars on mobile to prevent hydration flashes on initial load/refresh */
-/* Hide desktop sidebars on mobile to prevent hydration flashes on initial load/refresh */
-@media (max-width: 1023px) {
-  .shop-desktop-sidebar {
-    display: none !important;
-  }
-}
-
-/* ─────────────────────────────────────────────
-   Premium Magnetic Scroll Animation (Scroll-Driven)
-   Mobile Only. Linear easing = true 1:1 magnetic feel.
-   'cover' range = animation plays over much longer scroll arc.
-   No opacity — pure transform, zero color shift.
-───────────────────────────────────────────── */
-@media (max-width: 1023px) {
-  @keyframes magnetic-pull {
-    from {
-      transform: translateY(36px) scale(0.97);
-    }
-    to {
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  .magnetic-scroll {
-    transform: translateY(0);
-  }
-
-  @supports (animation-timeline: view()) {
-    .magnetic-scroll {
-      /* Linear easing: card moves exactly 1:1 with your thumb — the true magnetic feel.
-         'cover 30%' range: animation plays from first pixel of entry until
-         the card covers 30% of the viewport — long, graceful, unhurried. */
-      animation: magnetic-pull linear both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 30%;
-    }
-
-    /* First 2 cards are already in viewport on load —
-       skip animation entirely to prevent mid-transition jitter */
-    .no-scroll-anim {
-      animation: none !important;
-      transform: translateY(0) !important;
-      opacity: 1 !important;
-    }
-  }
-}
-
-/* ─────────────────────────────────────────────
-   Premium Sunset Gradient Buttons
-   "Pink to Orange" theme for high-end CTA feel
-───────────────────────────────────────────── */
-.premium-cta-btn {
-  @apply text-white bg-gradient-to-br from-[#ec4899] to-[#fb923c] hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-200 font-medium rounded-lg text-base px-6 py-3 text-center transition-all duration-300;
-  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
-}
-
-.premium-cta-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
-}
-
-.premium-cta-btn:active {
-  transform: translateY(0);
-}
-
-.premium-cta-btn:disabled {
-  @apply from-gray-300 to-gray-400 cursor-not-allowed opacity-70 transform-none shadow-none;
-}
-
-/* ─────────────────────────────────────────────
-   Artwork Status Stamps (Badges)
-   Premium 2026 Pastel Aesthetic
-───────────────────────────────────────────── */
-.status-stamp {
-  position: absolute;
-  top: 15px;
-  right: -32px;
-  transform: rotate(45deg);
-  padding: 4px 35px;
-  font-family: var(--font-sans);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  z-index: 10;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  pointer-events: none;
-  white-space: nowrap;
-  mix-blend-mode: multiply; /* Helps it look more like a "stamp" on the image */
-  opacity: 0.9;
-}
-
-@media (max-width: 768px) {
-  .status-stamp {
-    top: 10px;
-    right: -28px;
-    padding: 3px 30px;
-    font-size: 0.55rem;
-  }
-}
-
-/* Aggressive Link Sanitization for Mobile */
-a, button, img {
-  -webkit-tap-highlight-color: transparent !important;
-  -webkit-touch-callout: none;
-  user-select: none;
-}
-
-a:active, a:focus {
-  background-color: transparent !important;
-}
+} /* ───────────────────────────────────────────── Home Page specific hover states (Replaces JS onMouseEnter) ───────────────────────────────────────────── */
