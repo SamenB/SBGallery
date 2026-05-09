@@ -28,9 +28,9 @@
 
 ---
 
-ArtShop is a live, working art commerce platform powering [samen-bondarenko.com](https://samen-bondarenko.com) — my personal gallery and online shop as a painter. This is not a demo or a pet project: it accepts real orders, processes payments, and fulfills print-on-demand deliveries worldwide. The entire system — backend architecture, frontend design, admin tooling, deployment pipeline — was designed and built by me, with AI assistance on the frontend implementation.
+A commercial art commerce platform powering [samen-bondarenko.com](https://samen-bondarenko.com) — a live gallery and print shop that processes real orders, handles payments, and fulfills print-on-demand deliveries worldwide. Fully designed and built by me: backend architecture, system design, admin tooling, deployment pipeline, and frontend design direction (with AI assistance on frontend implementation).
 
-The project is **backend-heavy by design**. Prices, shipping, payment state, print availability, and fulfillment decisions live in backend source-of-truth layers. The frontend presents already-resolved data.
+**Backend-heavy by design.** Prices, shipping, payment state, print availability, and fulfillment decisions live in backend source-of-truth layers. The frontend presents already-resolved data.
 
 > **18** backend services · **14** ORM models · **31** Prodigi service modules · **51** test files · **61** Alembic migrations · **12** production Docker services
 
@@ -222,6 +222,86 @@ make frontend                # Next.js dev server
 make worker                  # Celery worker (optional)
 make beat                    # Celery Beat scheduler (optional)
 make test                    # Run 51 backend test files
+```
+
+---
+
+## Project Structure
+
+```
+├── backend/
+│   └── src/
+│       ├── api/                                 # 15 FastAPI route modules
+│       │   ├── auth.py                          #   JWT login, register, refresh, Google OAuth
+│       │   ├── payments.py                      #   Monobank invoice creation, ECDSA webhook
+│       │   ├── orders.py                        #   Checkout, fulfillment status, tracking
+│       │   ├── artworks.py                      #   Gallery CRUD, image upload, likes
+│       │   └── geo.py, labels.py, ...           #   Geo detection, labels, site settings
+│       │
+│       ├── services/                            # 18 business service classes
+│       │   ├── orders.py (1071 lines)           #   Full checkout lifecycle, mixed cart, emails
+│       │   ├── monobank.py                      #   Payment gateway client, ECDSA verification
+│       │   ├── auth.py                          #   Token pairs, Argon2, password management
+│       │   ├── email.py                         #   SMTP transactional emails, DB templates
+│       │   └── artworks.py, labels.py, ...      #   Domain services
+│       │
+│       ├── repositories/                        # Data access layer
+│       │   ├── base.py                          #   Generic CRUD + DataMapper pattern
+│       │   └── artworks.py, orders.py, ...      #   Specialized query repositories
+│       │
+│       ├── models/                              # 14 SQLAlchemy ORM models
+│       ├── schemas/                             # Pydantic v2 DTOs (request / response)
+│       │
+│       ├── integrations/prodigi/                # Prodigi provider boundary (31 modules)
+│       │   ├── catalog_pipeline/                #   Raw CSV → Curate → Parse → Plan
+│       │   ├── services/                        #   Storefront bake, materialization,
+│       │   │                                    #   fulfillment, order assets, sizing,
+│       │   │                                    #   shipping policy, snapshot, settings
+│       │   ├── fulfillment/                     #   Preflight gates, submit, retry, track
+│       │   ├── api/                             #   Admin routes, webhooks, diagnostics
+│       │   └── tasks/                           #   Maintenance CLI tools
+│       │
+│       ├── print_on_demand/                     # Abstract provider adapter (strategy)
+│       │   ├── base.py                          #   PrintProvider ABC — vendor contract
+│       │   └── registry.py                      #   Provider lookup + singleton cache
+│       │
+│       ├── tasks/                               # Celery workers + Beat schedules
+│       ├── middleware/                          # Redis-based rate limiting
+│       ├── connectors/                          # Telegram Bot, Redis manager
+│       ├── migrations/                          # 61 Alembic versions
+│       └── utils/
+│           ├── db_manager.py                    #   Unit of Work — 13 repos, deadlock retry
+│           └── order_public_code.py             #   XOR + Base36 order reference encoding
+│
+├── backend/tests/                               # 51 test files
+│   ├── unit_tests/services/                     #   30 service tests (Prodigi, orders, auth)
+│   ├── unit_tests/schemas/                      #   Schema validation tests
+│   ├── unit_tests/tasks/                        #   Celery task tests
+│   ├── integration_tests/                       #   Full API endpoint flows
+│   ├── mocks/                                   #   JSON fixtures (users, artworks, orders)
+│   └── conftest.py                              #   DB setup, MockRedis, auth fixtures
+│
+├── frontend/src/
+│   ├── app/                                     # Next.js 16 App Router
+│   │   ├── admin/                               #   Admin dashboard — 50+ components
+│   │   │   └── components/                      #   Orders, Prodigi hub, artwork management,
+│   │   │                                        #   fulfillment, storefront settings, email
+│   │   │                                        #   templates, labels, print pricing
+│   │   ├── artwork/[slug]/                      #   Artwork detail + print configurator
+│   │   ├── shop/                                #   Storefront with country-aware pricing
+│   │   ├── checkout/                            #   Multi-step checkout flow
+│   │   └── gallery/, about/, contact/, faq/     #   Content pages
+│   ├── components/                              #   Shared UI (Navbar, Footer, Cart, Auth)
+│   ├── context/                                 #   Cart, User, Preferences providers
+│   └── hooks/                                   #   Custom React hooks
+│
+├── nginx/nginx.conf                             # TLS, HTTP/2, rate limits, security headers
+├── monitoring/prometheus.yml                    # Metrics collection config
+├── scripts/backup.sh                            # pg_dump + rclone to Google Drive
+├── .github/workflows/                           # CI (lint + test) + CD (SSH deploy)
+├── docker-compose.yml                           # Local dev (Postgres + Redis)
+├── docker-compose.prod.yml                      # Production (12 services)
+└── Makefile                                     # Developer commands
 ```
 
 ---
