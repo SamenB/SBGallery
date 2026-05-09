@@ -1,6 +1,10 @@
 <div align="center">
 
-# 🎨 ArtShop
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme-assets/logo.png" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/readme-assets/logo.png" />
+  <img src="docs/readme-assets/logo.png" alt="Samen Bondarenko Gallery" width="420" />
+</picture>
 
 ### Production-Grade Art Commerce Platform
 
@@ -10,8 +14,8 @@
 
 <br/>
 
-[![CI](https://github.com/SamenB/ArtShop/actions/workflows/ci.yml/badge.svg)](https://github.com/SamenB/ArtShop/actions/workflows/ci.yml)
-[![CD](https://github.com/SamenB/ArtShop/actions/workflows/cd.yml/badge.svg)](https://github.com/SamenB/ArtShop/actions/workflows/cd.yml)
+[![CI](https://github.com/SamenB/SBGallery/actions/workflows/ci.yml/badge.svg)](https://github.com/SamenB/SBGallery/actions/workflows/ci.yml)
+[![CD](https://github.com/SamenB/SBGallery/actions/workflows/cd.yml/badge.svg)](https://github.com/SamenB/SBGallery/actions/workflows/cd.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.124-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)

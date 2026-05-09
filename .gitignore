@@ -30,6 +30,7 @@ backend/logs/*
 docs/*
 !docs/.gitkeep
 !docs/prodigi-production-runbook.md
+!docs/readme-assets/
 # Dev notes
 backend/src/utils/halping_commands.txt
 
