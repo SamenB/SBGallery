@@ -144,6 +144,15 @@ class PaymentWebhookVerificationException(ArtShopExeption):
     status_code = 403
 
 
+class ProdigiWebhookVerificationException(ArtShopExeption):
+    """
+    Raised when the Prodigi webhook shared secret is invalid or missing.
+    """
+
+    detail = "Prodigi webhook verification failed"
+    status_code = 403
+
+
 class MonobankServiceError(Exception):
     """
     Raised when the Monobank API returns a non-success HTTP status code.

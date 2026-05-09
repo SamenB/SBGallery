@@ -84,3 +84,27 @@ class ProdigiFulfillmentShipmentRead(BaseModel):
     payload: dict[str, Any] | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class ProdigiUpdateShippingMethodRequest(BaseModel):
+    shipping_method: str = Field(..., min_length=1, max_length=40)
+
+
+class ProdigiRecipientAddressRequest(BaseModel):
+    line1: str = Field(..., min_length=1, max_length=500)
+    line2: str | None = Field(None, max_length=500)
+    postalOrZipCode: str = Field(..., min_length=1, max_length=40)
+    countryCode: str = Field(..., min_length=2, max_length=2)
+    townOrCity: str = Field(..., min_length=1, max_length=200)
+    stateOrCounty: str | None = Field(None, max_length=100)
+
+
+class ProdigiUpdateRecipientRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    email: str | None = Field(None, max_length=200)
+    phoneNumber: str | None = Field(None, max_length=50)
+    address: ProdigiRecipientAddressRequest
+
+
+class ProdigiUpdateMetadataRequest(BaseModel):
+    metadata: dict[str, Any] = Field(default_factory=dict)

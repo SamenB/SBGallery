@@ -4,9 +4,11 @@ import logging
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from src.config import settings
+from src.exeptions import ProdigiWebhookVerificationException
 from src.integrations.prodigi.fulfillment.status import (
     apply_order_status_to_job,
     apply_prodigi_items_to_local_items,
@@ -35,7 +37,7 @@ class ProdigiCallbackService:
     ) -> dict:
         if settings.PRODIGI_WEBHOOK_SECRET and supplied_secret != settings.PRODIGI_WEBHOOK_SECRET:
             log.warning("Rejected Prodigi webhook with invalid or missing shared secret.")
-            return {"status": "error", "message": "invalid webhook secret"}
+            raise ProdigiWebhookVerificationException()
 
         log.info("Received Prodigi webhook event: %s", event)
         event_uid = str(event.get("id") or "") or None
@@ -46,10 +48,22 @@ class ProdigiCallbackService:
         self._add_received_event(event=event, event_uid=event_uid)
 
         if not self._is_order_event(event):
-            await self.db.commit()
+            try:
+                await self.db.commit()
+            except IntegrityError:
+                await self.db.rollback()
+                log.info(
+                    "Skipping duplicate Prodigi webhook event after insert race: %s", event_uid
+                )
+                return {"status": "ok", "duplicate": True}
             return {"status": "ok"}
 
-        return await self._process_order_event(event)
+        try:
+            return await self._process_order_event(event)
+        except IntegrityError:
+            await self.db.rollback()
+            log.info("Skipping duplicate Prodigi webhook event after insert race: %s", event_uid)
+            return {"status": "ok", "duplicate": True}
 
     def _add_received_event(self, *, event: dict[str, Any], event_uid: str | None) -> None:
         self.db.session.add(

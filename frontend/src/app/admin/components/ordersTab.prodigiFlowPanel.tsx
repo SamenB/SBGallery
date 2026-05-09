@@ -38,8 +38,24 @@ function ProdigiFlowPanel({
     0,
   );
   const customerPaid = Number(order.total_price ?? 0);
-  const isUnderpaid = supplierTotal > 0 && supplierTotal > customerPaid;
-  const margin = customerPaid - supplierTotal;
+  const costGate = (flow?.gates ?? []).find(
+    (gate: any) => gate.gate === "cost_covered",
+  );
+  const costMeasured = costGate?.measured ?? {};
+  const comparablePaid = Number(
+    costMeasured.customer_paid_eur ?? customerPaid,
+  );
+  const customerPaidUsd = Number(costMeasured.customer_paid ?? customerPaid);
+  const usdToEurRate = Number(costMeasured.usd_to_eur_rate ?? 0);
+  const costCoveredByBackend =
+    typeof costMeasured.covered === "boolean"
+      ? costMeasured.covered
+      : costGate?.status === "passed";
+  const isUnderpaid =
+    costGate !== undefined
+      ? !costCoveredByBackend
+      : supplierTotal > 0 && supplierTotal > comparablePaid;
+  const margin = comparablePaid - supplierTotal;
   const latestJob = (flow?.jobs ?? [])[0];
   const preflightPassed = flow?.preflight_status === "passed";
   const submitBlocker = isUnderpaid
@@ -55,7 +71,7 @@ function ProdigiFlowPanel({
       : "Submit This Order To Prodigi";
   return (
     <div className="bg-white border border-[#31323E]/10 rounded-xl p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-4">
         <div>
           <SectionLabel text="Prodigi API Flow" />
           <p className="text-xs font-medium leading-relaxed text-[#31323E]/50">
@@ -64,13 +80,6 @@ function ProdigiFlowPanel({
             here.
           </p>
         </div>
-        <button
-          onClick={onRefresh}
-          disabled={loading}
-          className="rounded-md border border-[#31323E]/15 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#31323E]/60 disabled:opacity-50"
-        >
-          {loading ? "Loading" : "Refresh"}
-        </button>
       </div>
 
       {!hasPrints ? (
@@ -81,7 +90,7 @@ function ProdigiFlowPanel({
         <div className="rounded-lg border border-[#31323E]/10 bg-[#31323E]/3 p-4 text-xs font-semibold text-[#31323E]/50">
           {loading
             ? "Loading Prodigi flow..."
-            : "Open or refresh to load the Prodigi flow."}
+            : "Open the Prodigi tab to load the fulfillment flow."}
         </div>
       ) : (
         <div className="space-y-4">
@@ -133,8 +142,11 @@ function ProdigiFlowPanel({
                   {isUnderpaid ? "Cost check failed" : "Cost check passed"}
                 </p>
                 <p className="mt-1 text-xs font-medium leading-relaxed opacity-80">
-                  Customer paid ${customerPaid.toFixed(2)}. Prodigi supplier
-                  total is {formatEuro(supplierTotal)}.
+                  Customer paid ${customerPaidUsd.toFixed(2)}
+                  {usdToEurRate > 0
+                    ? ` (${formatEuro(comparablePaid)} at USD/EUR ${usdToEurRate.toFixed(4)})`
+                    : ""}.
+                  Prodigi supplier total is {formatEuro(supplierTotal)}.
                 </p>
               </div>
               <span className="rounded-md border border-current/20 bg-white/55 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em]">

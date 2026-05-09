@@ -276,28 +276,22 @@ function ProdigiWebhookStatusPanel({
   onRequestStatus: () => void;
 }) {
   const webhookStatus = flow?.webhook_status ?? {};
-  const readiness = flow?.webhook_readiness ?? {};
-  const webhookJson = compactJson(flow?.latest_webhook_event?.response_payload);
-  const requestJson = compactJson(flow?.latest_status_poll_event?.response_payload);
-  const submitPayloadJson = compactJson(latestJob?.request_payload);
+  const statusPollJson = compactJson(flow?.latest_status_poll_event?.response_payload);
   const hasProdigiOrder = Boolean(latestJob?.prodigi_order_id);
   const remoteStatus =
-    webhookStatus.status_stage ||
     latestJob?.status_stage ||
+    webhookStatus.status_stage ||
     webhookStatus.job_status ||
     latestJob?.status ||
-    (hasProdigiOrder ? "pending" : "No Prodigi order yet");
-  const readinessRows = [
-    ["Mode", readiness.prodigi_api_mode ?? flow?.settings?.prodigi_api_mode],
-    ["Public URL", readiness.public_base_url_present ? readiness.public_base_url : "Missing"],
-    ["HTTPS", readiness.public_base_url_is_https ? "Ready" : "Not public HTTPS"],
-    ["Secret", readiness.webhook_secret_configured ? "Configured" : "Missing"],
-  ];
+    (hasProdigiOrder ? "Pending" : "Not submitted");
+  const sourceLabel = hasProdigiOrder
+    ? webhookStatus.state || "Awaiting webhook"
+    : "No Prodigi order yet";
 
   return (
     <div className="rounded-xl border border-[#31323E]/10 bg-white p-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-        <div className="min-w-0">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+        <div className="min-w-0 space-y-3">
           <SectionLabel text="Webhook / Status" />
           <div className="flex flex-wrap items-center gap-2">
             <FlowStatusPill status={remoteStatus} />
@@ -308,24 +302,12 @@ function ProdigiWebhookStatusPanel({
               </span>
             )}
           </div>
-          <p className="mt-2 text-xs font-medium leading-relaxed text-[#31323E]/55">
+          <p className="text-xs font-medium leading-relaxed text-[#31323E]/55">
             {hasProdigiOrder
-              ? `${webhookStatus.state || "Awaiting webhook"} for Prodigi order ${latestJob.prodigi_order_id}.`
-              : "Submit creates a Prodigi order first; webhook and manual status requests appear after that."}
+              ? `${sourceLabel} for Prodigi order ${latestJob.prodigi_order_id}.`
+              : sourceLabel}
           </p>
-          {readiness.callback_url && (
-            <p className="mt-2 break-all rounded-md bg-[#F7F7F5] p-2 text-[10px] font-medium leading-relaxed text-[#31323E]/45">
-              {readiness.callback_url}
-            </p>
-          )}
-          <div className="mt-3 grid gap-2 text-[11px] md:grid-cols-2">
-            {readinessRows.map(([label, value]) => (
-              <div key={label} className="rounded-md border border-[#31323E]/8 bg-[#F7F7F5] p-2">
-                <p className="font-bold uppercase tracking-[0.12em] text-[#31323E]/35">{label}</p>
-                <p className="mt-1 break-all font-semibold text-[#31323E]">{String(value ?? "-")}</p>
-              </div>
-            ))}
-          </div>
+          <ProdigiStageRail latestJob={latestJob} remoteStatus={remoteStatus} />
         </div>
 
         <div className="space-y-2">
@@ -355,45 +337,88 @@ function ProdigiWebhookStatusPanel({
           </button>
         </div>
       </div>
-
-      {submitPayloadJson ? (
+      {statusPollJson ? (
         <details className="mt-3 rounded-lg border border-[#31323E]/8 bg-[#121212] p-3 text-xs">
           <summary className="cursor-pointer font-bold text-white">
-            Exact Prodigi submit payload{" "}
-            <span className="text-white/45">{latestJob?.request_payload?.merchantReference}</span>
+            Latest Request Status response JSON
           </summary>
-          <pre className="mt-2 max-h-96 overflow-auto text-[10px] leading-relaxed text-emerald-300">
-            {submitPayloadJson}
+          <pre className="mt-2 max-h-72 overflow-auto text-[10px] leading-relaxed text-emerald-300">
+            {statusPollJson}
           </pre>
         </details>
-      ) : (
-        <div className="mt-3 rounded-lg border border-dashed border-[#31323E]/12 bg-[#F7F7F5] p-3 text-[11px] font-semibold leading-relaxed text-[#31323E]/45">
-          No Prodigi submit payload has been prepared yet. Run Refresh Preflight to build it.
-        </div>
-      )}
-
-      {(webhookJson || requestJson) && (
-        <div className="mt-3 grid gap-2 lg:grid-cols-2">
-          {webhookJson && (
-            <details className="rounded-lg border border-[#31323E]/8 bg-[#121212] p-3 text-xs">
-              <summary className="cursor-pointer font-bold text-white">Last webhook JSON</summary>
-              <pre className="mt-2 max-h-72 overflow-auto text-[10px] leading-relaxed text-emerald-300">
-                {webhookJson}
-              </pre>
-            </details>
-          )}
-          {requestJson && (
-            <details className="rounded-lg border border-[#31323E]/8 bg-[#121212] p-3 text-xs">
-              <summary className="cursor-pointer font-bold text-white">Last request JSON</summary>
-              <pre className="mt-2 max-h-72 overflow-auto text-[10px] leading-relaxed text-emerald-300">
-                {requestJson}
-              </pre>
-            </details>
-          )}
-        </div>
-      )}
+      ) : null}
     </div>
   );
+}
+
+const PRODIGI_STAGE_RAIL = [
+  { key: "not_submitted", label: "Not submitted", aliases: ["not_submitted"] },
+  { key: "submitted", label: "Submitted", aliases: ["submitted", "pending"] },
+  { key: "on_hold", label: "On hold", aliases: ["on_hold", "onhold"] },
+  {
+    key: "in_progress",
+    label: "In progress",
+    aliases: ["in_progress", "inprogress"],
+  },
+  { key: "issue", label: "Issue", aliases: ["issue", "createdwithissues"] },
+  { key: "complete", label: "Complete", aliases: ["complete", "completed"] },
+  { key: "cancelled", label: "Cancelled", aliases: ["cancelled", "canceled"] },
+];
+
+function ProdigiStageRail({
+  latestJob,
+  remoteStatus,
+}: {
+  latestJob: any;
+  remoteStatus: string;
+}) {
+  const statusCandidates = [
+    latestJob?.status_stage,
+    remoteStatus,
+    latestJob?.status,
+    latestJob?.prodigi_order_id ? "submitted" : "not_submitted",
+  ];
+  const normalizedCandidates = statusCandidates.map(normalizeStageKey);
+  const activeStage =
+    PRODIGI_STAGE_RAIL.find((stage) =>
+      stage.aliases.some((alias) => normalizedCandidates.includes(alias)),
+    ) ?? PRODIGI_STAGE_RAIL[0];
+  const hasKnownRemoteStage = PRODIGI_STAGE_RAIL.some((stage) =>
+    stage.aliases.some((alias) => alias === normalizeStageKey(remoteStatus)),
+  );
+  const showUnknownRemote = remoteStatus && !hasKnownRemoteStage;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {PRODIGI_STAGE_RAIL.map((stage) => {
+        const active = stage.key === activeStage.key;
+        return (
+          <span
+            key={stage.key}
+            className={`rounded-md border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${
+              active
+                ? "border-[#31323E] bg-[#31323E] text-white"
+                : "border-[#31323E]/10 bg-[#F7F7F5] text-[#31323E]/40"
+            }`}
+          >
+            {stage.label}
+          </span>
+        );
+      })}
+      {showUnknownRemote ? (
+        <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-700">
+          {remoteStatus}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function normalizeStageKey(value: any) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 export { FlowStatusPill, ProdigiFlowStepRow, ProdigiAssetPreviewPanel, ProdigiWebhookStatusPanel };

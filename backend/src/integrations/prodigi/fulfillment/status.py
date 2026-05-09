@@ -246,3 +246,4 @@ def _apply_first_tracking_to_order(order: OrdersOrm, tracking: dict[str, str | N
         order.tracking_url = tracking["tracking_url"]
     if tracking.get("tracking_number") or tracking.get("carrier") or tracking.get("tracking_url"):
         order.fulfillment_status = "shipped"
+        order.shipped_at = order.shipped_at or datetime.now(timezone.utc).replace(tzinfo=None)

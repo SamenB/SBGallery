@@ -1,4 +1,4 @@
-import { getApiUrl, getImageUrl } from "@/utils";
+import { getApiUrl, getImageUrl, refreshApiSession } from "@/utils";
 import { ArtworkFormState, ImageEntry } from "./types";
 
 export const STATUS_OPTIONS = [
@@ -261,7 +261,7 @@ export function uploadFormDataWithProgress<T>(
     body: FormData,
     onProgress: (progress: number) => void
 ): Promise<T> {
-    return new Promise((resolve, reject) => {
+    const send = (hasRetriedAuth: boolean): Promise<T> => new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", url);
         request.withCredentials = true;
@@ -284,12 +284,28 @@ export function uploadFormDataWithProgress<T>(
                 resolve(payload as T);
                 return;
             }
+            if (request.status === 401 && !hasRetriedAuth) {
+                refreshApiSession()
+                    .then((refreshed) => {
+                        if (!refreshed) {
+                            reject(new Error(String(payload.detail || payload.message || "Not authorized")));
+                            return;
+                        }
+                        onProgress(0);
+                        send(true).then(resolve).catch(reject);
+                    })
+                    .catch(() => {
+                        reject(new Error(String(payload.detail || payload.message || "Not authorized")));
+                    });
+                return;
+            }
             reject(new Error(String(payload.detail || payload.message || `Upload failed (${request.status}).`)));
         };
         request.onerror = () => reject(new Error("Upload failed: connection was interrupted."));
         request.onabort = () => reject(new Error("Upload cancelled."));
         request.send(body);
     });
+    return send(false);
 }
 
 export function getDerivativeStrategyLabel(strategy: string | null | undefined): string | null {

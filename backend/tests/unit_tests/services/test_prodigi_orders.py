@@ -8,6 +8,7 @@ from src.integrations.prodigi.fulfillment.workflow import ProdigiFulfillmentWork
 from src.integrations.prodigi.services.prodigi_fulfillment_quality import (
     FulfillmentGateResult,
     PreparedProdigiItem,
+    ProdigiFulfillmentQualityService,
 )
 from src.integrations.prodigi.services.prodigi_orders import ProdigiOrderService
 
@@ -55,6 +56,31 @@ class _FakeProdigiClient:
 
     async def get_order(self, order_id):
         return self.order_response
+
+
+class _FakeQuoteClient:
+    response = {
+        "outcome": "CreatedWithIssues",
+        "issues": [
+            {
+                "errorCode": "destinationCountryCode.UsSalesTaxWarning",
+                "description": "Please note: Quote does not include sales tax, which may apply",
+            }
+        ],
+        "quotes": [{"shipmentMethod": "Overnight"}],
+    }
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_):
+        return None
+
+    async def get_quote(self, **kwargs):
+        return self.response
 
 
 class _FakeOrderAssetService:
@@ -210,6 +236,71 @@ async def test_preflight_blocks_localhost_callback_url(monkeypatch):
     assert result.request_payload is None
     assert _FakeQualityService.persisted_order_gates[-1].gate == "callback_url_public_https"
     assert _FakeQualityService.persisted_order_gates[-1].status == "failed"
+
+
+@pytest.mark.asyncio
+async def test_preflight_blocks_mixed_shipping_methods(monkeypatch):
+    monkeypatch.setattr(settings, "PUBLIC_BASE_URL", "https://example.test")
+    _FakeQualityService.persisted_order_gates = []
+    _FakeQualityService.events = []
+    _FakeQualityService.prepared_asset = {
+        "file_url": "https://assets.example.test/print.png",
+        "print_area_name": "default",
+    }
+    monkeypatch.setattr(
+        "src.integrations.prodigi.fulfillment.workflow.ProdigiFulfillmentQualityService",
+        _FakeQualityService,
+    )
+
+    first_item = _build_order_item(id=11, prodigi_shipping_method="Standard")
+    second_item = _build_order_item(id=12, prodigi_shipping_method="Overnight")
+    order = _build_order(first_item)
+    order.items = [first_item, second_item]
+    db_session = _FakeDbSession(order=order)
+
+    result = await ProdigiFulfillmentWorkflow(db_session).run_preflight(
+        order,
+        commit=False,
+    )
+
+    shipping_gate = next(
+        gate
+        for gate in _FakeQualityService.persisted_order_gates
+        if gate.gate == "single_shipping_method"
+    )
+    assert result.passed is False
+    assert result.request_payload is None
+    assert shipping_gate.status == "failed"
+    assert shipping_gate.measured["unique_shipping_methods"] == ["Overnight", "Standard"]
+
+
+@pytest.mark.asyncio
+async def test_quote_gate_accepts_created_with_issues_when_quote_is_present(monkeypatch):
+    monkeypatch.setattr(settings, "PRODIGI_API_KEY", "sandbox-key")
+    monkeypatch.setattr(settings, "PRODIGI_SANDBOX", True)
+    monkeypatch.setattr(
+        "src.integrations.prodigi.services.prodigi_fulfillment_quality.ProdigiClient",
+        _FakeQuoteClient,
+    )
+
+    item = _build_order_item(
+        prodigi_sku="GLOBAL-CAN-ROL-SC-8X10",
+        prodigi_attributes={"edge": "Rolled"},
+        prodigi_shipping_method="Overnight",
+        prodigi_supplier_currency="USD",
+    )
+    order = _build_order(item)
+    order.shipping_country_code = "US"
+
+    gate = await ProdigiFulfillmentQualityService(None)._quote_gate(
+        order=order,
+        item=item,
+        print_area_name="default",
+    )
+
+    assert gate.status == "passed"
+    assert gate.measured["response"]["outcome"] == "CreatedWithIssues"
+    assert gate.error is None
 
 
 @pytest.mark.asyncio

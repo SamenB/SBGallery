@@ -9,6 +9,7 @@ from src.integrations.prodigi.fulfillment.status import (
     extract_stage,
     format_item_status,
     job_status_from_order_payload,
+    persist_shipments,
     webhook_event_exists,
 )
 
@@ -129,3 +130,51 @@ async def test_webhook_event_exists_supports_duplicate_event_guard():
     assert await webhook_event_exists(_DuplicateEventSession(42), "evt_123") is True
     assert await webhook_event_exists(_DuplicateEventSession(None), "evt_123") is False
     assert await webhook_event_exists(_DuplicateEventSession(42), None) is False
+
+
+class _ShipmentSession:
+    def __init__(self):
+        self.rows = []
+
+    async def execute(self, statement):
+        return _ScalarResult(None)
+
+    def add(self, row):
+        self.rows.append(row)
+
+
+@pytest.mark.asyncio
+async def test_persist_shipments_marks_order_shipped_with_timestamp():
+    session = _ShipmentSession()
+    job = SimpleNamespace(id=7, prodigi_order_id="ord_123")
+    order = SimpleNamespace(
+        id=101,
+        tracking_number=None,
+        carrier=None,
+        tracking_url=None,
+        fulfillment_status="confirmed",
+        shipped_at=None,
+    )
+
+    await persist_shipments(
+        db_session=session,
+        job=job,
+        order=order,
+        order_data={
+            "shipments": [
+                {
+                    "id": "shp_1",
+                    "status": "Shipped",
+                    "carrier": "DHL",
+                    "trackingNumber": "TRACK123",
+                    "trackingUrl": "https://tracking.example/TRACK123",
+                }
+            ]
+        },
+    )
+
+    assert len(session.rows) == 1
+    assert order.tracking_number == "TRACK123"
+    assert order.carrier == "DHL"
+    assert order.fulfillment_status == "shipped"
+    assert order.shipped_at is not None

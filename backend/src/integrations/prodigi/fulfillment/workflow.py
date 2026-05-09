@@ -123,6 +123,10 @@ class ProdigiFulfillmentWorkflow:
 
         prepared_items = await self._prepare_items(order, print_items, job_id)
         if len(prepared_items) != len(print_items):
+            blocking_gates = await self._failed_preflight_gate_names(
+                order_id=int(order.id),
+                job_id=job_id,
+            )
             if job is not None:
                 job.status = "blocked"
                 job.last_error = "No print items passed Prodigi fulfillment quality gates."
@@ -137,15 +141,7 @@ class ProdigiFulfillmentWorkflow:
                     measured={
                         "prepared_item_count": len(prepared_items),
                         "expected_item_count": len(print_items),
-                        "blocking_gates": [
-                            "public_asset_url_ready",
-                            "asset_rendered",
-                            "rendered_asset_pixel_match",
-                            "rendered_asset_md5_ready",
-                            "prodigi_quote_check",
-                            "live_prodigi_pixel_contract_verified",
-                            "storefront_rehydrated",
-                        ],
+                        "blocking_gates": blocking_gates,
                     },
                     expected={"prodigi_order_payload": "valid", "items": len(print_items)},
                     error=(
@@ -392,6 +388,31 @@ class ProdigiFulfillmentWorkflow:
             prepared_items.append(prepared)
         return prepared_items
 
+    async def _failed_preflight_gate_names(
+        self,
+        *,
+        order_id: int,
+        job_id: int | None,
+    ) -> list[str]:
+        if not hasattr(self.db_session, "execute"):
+            return []
+        if hasattr(self.db_session, "flush"):
+            await self.db_session.flush()
+        stmt = (
+            select(ProdigiFulfillmentGateResultOrm.gate)
+            .where(
+                ProdigiFulfillmentGateResultOrm.order_id == order_id,
+                ProdigiFulfillmentGateResultOrm.status.in_([FAILED, BLOCKED]),
+            )
+            .order_by(ProdigiFulfillmentGateResultOrm.created_at.asc())
+        )
+        if job_id is not None:
+            stmt = stmt.where(ProdigiFulfillmentGateResultOrm.job_id == job_id)
+        result = await self.db_session.execute(stmt)
+        if not hasattr(result, "scalars"):
+            return []
+        return list(dict.fromkeys(str(gate) for gate in result.scalars()))
+
     async def _submit_to_prodigi(
         self,
         *,
@@ -634,6 +655,7 @@ class ProdigiFulfillmentWorkflow:
         job_id = getattr(job, "id", None)
         cost_summary = self._cost_summary(order, print_items)
         recipient_check = self._recipient_check(order)
+        shipping_method_check = self._shipping_method_check(print_items)
         gates = [
             FulfillmentGateResult(
                 gate="payment_confirmed",
@@ -665,10 +687,19 @@ class ProdigiFulfillmentWorkflow:
                 gate="cost_covered",
                 status=PASSED if cost_summary["covered"] else FAILED,
                 measured=cost_summary,
-                expected={"customer_paid": ">= supplier_total"},
+                expected={"customer_paid_eur": ">= supplier_total_eur"},
                 error=None
                 if cost_summary["covered"]
-                else "Customer paid total is below the persisted Prodigi supplier total.",
+                else (
+                    "Converted customer paid total is below the persisted Prodigi supplier total."
+                ),
+            ),
+            FulfillmentGateResult(
+                gate="single_shipping_method",
+                status=PASSED if shipping_method_check["passed"] else FAILED,
+                measured=shipping_method_check["measured"],
+                expected=shipping_method_check["expected"],
+                error=shipping_method_check["error"],
             ),
             FulfillmentGateResult(
                 gate="job_created",
@@ -705,14 +736,40 @@ class ProdigiFulfillmentWorkflow:
                 supplier_total += float(getattr(item, "prodigi_wholesale_eur", None) or 0)
                 supplier_total += float(getattr(item, "prodigi_shipping_eur", None) or 0)
         customer_paid = float(getattr(order, "total_price", None) or 0)
+        usd_to_eur = float(settings.MONOBANK_USD_TO_EUR_RATE or 1)
+        customer_paid_eur = customer_paid * usd_to_eur
         return {
             "customer_paid": customer_paid,
             "customer_currency": "USD",
+            "customer_paid_eur": customer_paid_eur,
             "supplier_total": supplier_total,
             "supplier_currency": "EUR",
-            "estimated_margin_before_fx": customer_paid - supplier_total,
-            "covered": supplier_total <= customer_paid,
-            "note": "Supplier costs are EUR; margin is before FX conversion and payment fees.",
+            "usd_to_eur_rate": usd_to_eur,
+            "estimated_margin_eur_before_fees": customer_paid_eur - supplier_total,
+            "covered": supplier_total <= customer_paid_eur,
+            "note": "Supplier costs are EUR; customer paid USD is converted with backend FX policy.",
+        }
+
+    def _shipping_method_check(self, print_items: list[Any]) -> dict[str, Any]:
+        methods = [
+            canonical_shipping_method(getattr(item, "prodigi_shipping_method", None))
+            for item in print_items
+            if getattr(item, "prodigi_sku", None)
+        ]
+        unique_methods = sorted(set(methods))
+        return {
+            "passed": len(unique_methods) <= 1,
+            "measured": {
+                "shipping_methods": methods,
+                "unique_shipping_methods": unique_methods,
+            },
+            "expected": {"unique_shipping_method_count": "<= 1"},
+            "error": None
+            if len(unique_methods) <= 1
+            else (
+                "A single Prodigi order can only use one top-level shippingMethod. "
+                "Create separate fulfillment jobs or recreate the order with one shipping method."
+            ),
         }
 
     def _recipient_check(self, order: OrdersOrm) -> dict[str, Any]:

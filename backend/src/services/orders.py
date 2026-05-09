@@ -10,6 +10,7 @@ from uuid import uuid4
 from loguru import logger
 from sqlalchemy.exc import SQLAlchemyError
 
+from src.config import settings
 from src.exeptions import (
     DatabaseException,
     InvalidDataException,
@@ -118,12 +119,19 @@ class OrderService(BaseService):
         if not email or "@" not in email:
             return {"status": "OK", "data": []}
         orders = await self.get_orders_by_email(email.strip().lower())
+        data = []
+        for order in orders:
+            data.append(await self._serialize_public_tracking_order(order))
         return {
             "status": "OK",
-            "data": [self._serialize_public_tracking_order(order) for order in orders],
+            "data": data,
         }
 
-    def _serialize_public_tracking_order(self, order) -> dict:
+    async def _serialize_public_tracking_order(self, order) -> dict:
+        shipments = []
+        prodigi_repo = getattr(self.db, "prodigi_fulfillment", None)
+        if prodigi_repo is not None:
+            shipments = await prodigi_repo.get_shipments_for_order(int(order.id))
         return {
             "id": order.id,
             "created_at": str(order.created_at) if order.created_at else None,
@@ -137,6 +145,23 @@ class OrderService(BaseService):
             "tracking_number": order.tracking_number,
             "carrier": order.carrier,
             "tracking_url": order.tracking_url,
+            "shipments": [
+                {
+                    "prodigi_order_id": shipment.prodigi_order_id,
+                    "prodigi_shipment_id": shipment.prodigi_shipment_id,
+                    "status": shipment.status,
+                    "carrier": shipment.carrier,
+                    "tracking_number": shipment.tracking_number,
+                    "tracking_url": shipment.tracking_url,
+                    "created_at": str(shipment.created_at) if shipment.created_at else None,
+                    "updated_at": str(shipment.updated_at) if shipment.updated_at else None,
+                }
+                for shipment in shipments
+            ],
+            "delivery_semantics": {
+                "shipped_source": "Prodigi shipment/tracking data or manual admin entry",
+                "delivered_source": "Manual ArtShop status until carrier delivery integration exists",
+            },
             "confirmed_at": str(order.confirmed_at) if order.confirmed_at else None,
             "print_ordered_at": str(order.print_ordered_at) if order.print_ordered_at else None,
             "shipped_at": str(order.shipped_at) if order.shipped_at else None,
@@ -889,8 +914,10 @@ class OrderService(BaseService):
                 raise InvalidDataException(
                     detail=(
                         "Prodigi submission blocked: supplier total "
-                        f"EUR {summary['supplier_total']:.2f} exceeds customer paid "
-                        f"${summary['customer_paid']:.2f}."
+                        f"EUR {summary['supplier_total']:.2f} exceeds converted customer paid "
+                        f"EUR {summary['customer_paid_eur']:.2f} "
+                        f"(${summary['customer_paid']:.2f} at USD/EUR "
+                        f"{summary['usd_to_eur_rate']:.4f})."
                     )
                 )
             await get_print_provider().submit_paid_order_items(
@@ -926,16 +953,22 @@ class OrderService(BaseService):
             else:
                 supplier_total += float(getattr(item, "prodigi_wholesale_eur", None) or 0)
                 supplier_total += float(getattr(item, "prodigi_shipping_eur", None) or 0)
+        customer_paid_usd = float(order.total_price or 0)
+        usd_to_eur = float(settings.MONOBANK_USD_TO_EUR_RATE or 1)
         return {
-            "customer_paid": float(order.total_price or 0),
+            "customer_paid": customer_paid_usd,
+            "customer_paid_eur": customer_paid_usd * usd_to_eur,
+            "customer_currency": "USD",
             "supplier_total": supplier_total,
+            "supplier_currency": "EUR",
+            "usd_to_eur_rate": usd_to_eur,
         }
 
     def _print_provider_cost_is_covered(self, order) -> bool:
         summary = self._print_provider_cost_summary(order)
         if summary["supplier_total"] <= 0:
             return True
-        return summary["supplier_total"] <= summary["customer_paid"]
+        return summary["supplier_total"] <= summary["customer_paid_eur"]
 
     async def delete_order(self, order_id: int):
         """

@@ -16,6 +16,11 @@ from src.schemas.orders import (
     OrderPatch,
     OrderStatusUpdate,
 )
+from src.schemas.prodigi_fulfillment import (
+    ProdigiUpdateMetadataRequest,
+    ProdigiUpdateRecipientRequest,
+    ProdigiUpdateShippingMethodRequest,
+)
 from src.services.orders import OrderService
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
@@ -107,6 +112,55 @@ async def submit_order_to_prodigi(order_id: int, admin_id: AdminDep, db: DBDep):
 @router.post("/{order_id}/prodigi-status-poll")
 async def poll_order_prodigi_status(order_id: int, admin_id: AdminDep, db: DBDep):
     return await ProdigiFulfillmentAdminService(db).request_status(order_id)
+
+
+@router.post("/{order_id}/prodigi-actions")
+async def get_order_prodigi_actions(order_id: int, admin_id: AdminDep, db: DBDep):
+    return await ProdigiFulfillmentAdminService(db).get_order_actions(order_id)
+
+
+@router.post("/{order_id}/prodigi-cancel")
+async def cancel_order_in_prodigi(order_id: int, admin_id: AdminDep, db: DBDep):
+    return await ProdigiFulfillmentAdminService(db).cancel_prodigi_order(order_id)
+
+
+@router.post("/{order_id}/prodigi-shipping-method")
+async def update_order_prodigi_shipping_method(
+    order_id: int,
+    admin_id: AdminDep,
+    db: DBDep,
+    payload: ProdigiUpdateShippingMethodRequest,
+):
+    return await ProdigiFulfillmentAdminService(db).update_prodigi_shipping_method(
+        order_id,
+        payload.shipping_method,
+    )
+
+
+@router.post("/{order_id}/prodigi-recipient")
+async def update_order_prodigi_recipient(
+    order_id: int,
+    admin_id: AdminDep,
+    db: DBDep,
+    payload: ProdigiUpdateRecipientRequest,
+):
+    return await ProdigiFulfillmentAdminService(db).update_prodigi_recipient(
+        order_id,
+        payload.model_dump(exclude_none=True),
+    )
+
+
+@router.post("/{order_id}/prodigi-metadata")
+async def update_order_prodigi_metadata(
+    order_id: int,
+    admin_id: AdminDep,
+    db: DBDep,
+    payload: ProdigiUpdateMetadataRequest,
+):
+    return await ProdigiFulfillmentAdminService(db).update_prodigi_metadata(
+        order_id,
+        payload.metadata,
+    )
 
 
 @router.put("/{order_id}/status")

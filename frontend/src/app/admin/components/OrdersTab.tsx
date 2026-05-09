@@ -21,10 +21,6 @@ export default function OrdersTab() {
   return (
     <div className="mx-auto max-w-[1500px] font-sans text-[#31323E]">
       <OrdersDashboardHeader
-        totalCount={ordersAdmin.orders.length}
-        activeCount={ordersAdmin.activeCount}
-        paidCount={ordersAdmin.paidCount}
-        shippedCount={ordersAdmin.shippedCount}
         prodigiMode={ordersAdmin.prodigiMode}
         prodigiModeDraft={ordersAdmin.prodigiModeDraft}
         modeSaving={ordersAdmin.modeSaving}

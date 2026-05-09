@@ -541,7 +541,10 @@ class ProdigiFulfillmentQualityService:
                 gate="prodigi_quote_check",
                 status=FAILED if api_key_required else SKIPPED,
                 measured={"api_key_present": False, "request": request},
-                expected={"quote_outcome": "Created|Ok", "api_key_required": api_key_required},
+                expected={
+                    "quote_outcome": "Created|Ok|CreatedWithIssues",
+                    "api_key_required": api_key_required,
+                },
                 error="PRODIGI_API_KEY is required for live Prodigi quote validation."
                 if api_key_required
                 else None,
@@ -554,17 +557,17 @@ class ProdigiFulfillmentQualityService:
                 gate="prodigi_quote_check",
                 status=FAILED,
                 measured={"request": request, "error": str(exc)},
-                expected={"quote_outcome": "Created|Ok"},
+                expected={"quote_outcome": "Created|Ok|CreatedWithIssues"},
                 error=f"Prodigi quote check failed: {exc}",
             )
         outcome = str(response.get("outcome") or "").replace(" ", "").lower()
         quotes = response.get("quotes") if isinstance(response.get("quotes"), list) else []
-        passed = outcome in {"created", "ok"} and bool(quotes)
+        passed = outcome in {"created", "ok", "createdwithissues"} and bool(quotes)
         return FulfillmentGateResult(
             gate="prodigi_quote_check",
             status=PASSED if passed else FAILED,
             measured={"request": request, "response": response},
-            expected={"quote_outcome": "Created|Ok", "quotes": "non-empty"},
+            expected={"quote_outcome": "Created|Ok|CreatedWithIssues", "quotes": "non-empty"},
             error=None if passed else "Prodigi quote response did not include an accepted quote.",
         )
 

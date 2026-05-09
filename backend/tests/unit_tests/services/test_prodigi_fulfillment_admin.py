@@ -5,13 +5,16 @@ import pytest
 from src.exeptions import InvalidDataException
 from src.integrations.prodigi.services.prodigi_fulfillment_admin import (
     ProdigiFulfillmentAdminService,
+    build_prodigi_flow_summary,
     latest_prodigi_event,
     serialize_event,
+    serialize_pause_visibility,
     serialize_webhook_readiness,
     serialize_webhook_status,
 )
 from src.schemas.prodigi_fulfillment import (
     ProdigiFulfillmentEventRead,
+    ProdigiFulfillmentGateResultRead,
     ProdigiFulfillmentJobRead,
 )
 
@@ -169,6 +172,54 @@ def test_prodigi_webhook_readiness_exposes_callback_configuration(monkeypatch):
     assert payload["callback_url"] == (
         "https://shop.example.test/api/v1/webhooks/prodigi?token=secret"
     )
+
+
+def test_prodigi_pause_visibility_explains_external_pause_window():
+    payload = serialize_pause_visibility(_job())
+
+    assert payload["configured_in"] == "Prodigi dashboard"
+    assert payload["actions_endpoint_available"] is True
+    assert "ArtShop controls when POST /orders is sent" in payload["local_control"]
+    assert "Prodigi dashboard" in payload["prodigi_control"]
+
+
+def test_prodigi_summary_marks_downstream_steps_blocked_by_early_item_gate():
+    now = datetime(2026, 5, 9, 20, 15, 0)
+    order = type(
+        "Order",
+        (),
+        {
+            "payment_status": "paid",
+            "confirmed_at": now,
+        },
+    )()
+    gate = ProdigiFulfillmentGateResultRead(
+        id=1,
+        job_id=7,
+        order_id=101,
+        order_item_id=11,
+        gate="master_asset_available",
+        status="failed",
+        measured={"artwork_id": 3, "asset_id": None},
+        expected={"provider_key": "prodigi", "role": "master"},
+        error="No master print asset was found.",
+        created_at=now,
+    )
+
+    summary = build_prodigi_flow_summary(
+        order=order,
+        latest_job=_job(status="blocked", status_stage=None),
+        print_items=[object()],
+        gates=[gate],
+        events=[],
+    )
+    storefront = next(step for step in summary if step["key"] == "storefront_rehydrated")
+    payload = next(step for step in summary if step["key"] == "payload_valid")
+
+    assert storefront["status"] == "blocked"
+    assert storefront["detail"] == "No master print asset was found."
+    assert storefront["measured"]["blocked_by"][0]["gate"] == "master_asset_available"
+    assert payload["status"] == "pending"
 
 
 @pytest.mark.asyncio

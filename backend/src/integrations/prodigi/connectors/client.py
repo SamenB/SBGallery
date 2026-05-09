@@ -202,6 +202,27 @@ class ProdigiClient:
     async def get_order(self, order_id: str) -> dict | None:
         return await self.get(f"/orders/{order_id}")
 
+    async def get_order_actions(self, order_id: str) -> dict | None:
+        return await self.get(f"/orders/{order_id}/actions")
+
+    async def cancel_order(self, order_id: str) -> dict:
+        return await self.post(f"/orders/{order_id}/actions/cancel", {})
+
+    async def update_order_shipping_method(self, order_id: str, shipping_method: str) -> dict:
+        return await self.post(
+            f"/orders/{order_id}/actions/updateShippingMethod",
+            {"shippingMethod": shipping_method},
+        )
+
+    async def update_order_recipient(self, order_id: str, recipient: dict[str, Any]) -> dict:
+        return await self.post(f"/orders/{order_id}/actions/updateRecipient", recipient)
+
+    async def update_order_metadata(self, order_id: str, metadata: dict[str, Any]) -> dict:
+        return await self.post(
+            f"/orders/{order_id}/actions/updateMetadata",
+            {"metadata": metadata},
+        )
+
     # ── Product Details ────────────────────────────────────────────────────────
 
     async def get_product(self, sku: str) -> ProductDetails | None:

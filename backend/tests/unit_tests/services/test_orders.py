@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from src.config import settings
 from src.exeptions import (
     InvalidDataException,
     OriginalSoldOutException,
@@ -60,15 +61,19 @@ def test_print_provider_cost_check_blocks_underpaid_order(order_service):
     )
 
     assert order_service._print_provider_cost_is_covered(order) is False
-    assert order_service._print_provider_cost_summary(order) == {
-        "customer_paid": 18.0,
-        "supplier_total": 22.95,
-    }
+    summary = order_service._print_provider_cost_summary(order)
+    assert summary["customer_paid"] == 18.0
+    assert summary["customer_paid_eur"] == pytest.approx(
+        18.0 * float(settings.MONOBANK_USD_TO_EUR_RATE)
+    )
+    assert summary["supplier_total"] == 22.95
+    assert summary["customer_currency"] == "USD"
+    assert summary["supplier_currency"] == "EUR"
 
 
 def test_print_provider_cost_check_allows_covered_order(order_service):
     order = SimpleNamespace(
-        total_price=30,
+        total_price=35,
         items=[
             SimpleNamespace(prodigi_wholesale_eur=9.0, prodigi_shipping_eur=20.95),
         ],

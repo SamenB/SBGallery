@@ -19,7 +19,14 @@ import { getApiUrl, apiFetch } from "@/utils";
  * it from the Monobank webhook, verified by ECDSA signature).
  */
 
-type PaymentStatus = "loading" | "paid" | "awaiting_payment" | "processing" | "failed" | "unknown";
+type PaymentStatus =
+    | "loading"
+    | "paid"
+    | "awaiting_payment"
+    | "processing"
+    | "failed"
+    | "not_confirmed"
+    | "unknown";
 
 export default function CheckoutSuccessPage() {
     return (
@@ -69,19 +76,23 @@ function CheckoutSuccessContent() {
 
                 if (ps === "paid") {
                     setStatus("paid");
-                } else if (ps === "failed") {
+                } else if (["failed", "refunded", "cancelled", "reversed"].includes(ps)) {
                     setStatus("failed");
                 } else if (ps === "processing" || ps === "hold") {
                     setStatus("processing");
                     // Continue polling — payment is still being processed.
                     if (!cancelled && pollCount < 30) {
                         setTimeout(() => setPollCount(c => c + 1), 3000);
+                    } else if (!cancelled) {
+                        setStatus("not_confirmed");
                     }
                 } else {
                     setStatus("awaiting_payment");
                     // Continue polling — webhook may not have arrived yet.
                     if (!cancelled && pollCount < 30) {
                         setTimeout(() => setPollCount(c => c + 1), 3000);
+                    } else if (!cancelled) {
+                        setStatus("not_confirmed");
                     }
                 }
             } catch {
@@ -274,8 +285,8 @@ function CheckoutSuccessContent() {
                     </>
                 )}
 
-                {/* Failed */}
-                {status === "failed" && (
+                {/* Failed / Not Confirmed */}
+                {(status === "failed" || status === "not_confirmed") && (
                     <>
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#E53E3E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 2rem auto", display: "block" }}>
                             <circle cx="12" cy="12" r="10"></circle>
@@ -290,7 +301,7 @@ function CheckoutSuccessContent() {
                             marginBottom: "1rem",
                             color: "#111",
                         }}>
-                            Payment Failed
+                            {status === "failed" ? "Payment Failed" : "Payment Not Confirmed"}
                         </h1>
                         <p style={{
                             color: "#666",
@@ -300,7 +311,9 @@ function CheckoutSuccessContent() {
                             maxWidth: "90%",
                             margin: "0 auto",
                         }}>
-                            Unfortunately, the transaction could not be completed. No charges have been made.
+                            {status === "failed"
+                                ? "Unfortunately, the transaction could not be completed. No charges have been made."
+                                : "We could not confirm a successful payment from the bank. If the payment page showed an error or timed out, please try again."}
                         </p>
                         <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "2rem" }}>
                             <Link href="/checkout" className="luxury-btn">

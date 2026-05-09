@@ -71,6 +71,10 @@ async function _tryRefresh(): Promise<boolean> {
   }
 }
 
+export async function refreshApiSession(): Promise<boolean> {
+  return _tryRefresh();
+}
+
 /**
  * Wrapper for the native fetch API that automatically handles silent JWT refreshing.
  * If a request returns a 401, it attempts one refresh cycle before failing.

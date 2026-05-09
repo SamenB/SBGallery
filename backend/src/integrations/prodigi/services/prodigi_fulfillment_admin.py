@@ -1,18 +1,29 @@
 from __future__ import annotations
 
+import json
+from typing import Any
+
 from src.config import settings
 from src.exeptions import InvalidDataException
-from src.integrations.prodigi.fulfillment.contract import callback_url as prodigi_callback_url
+from src.integrations.prodigi.connectors.client import ProdigiClient
+from src.integrations.prodigi.fulfillment.contract import (
+    callback_url as prodigi_callback_url,
+)
+from src.integrations.prodigi.fulfillment.contract import (
+    canonical_shipping_method,
+)
 from src.integrations.prodigi.fulfillment.gates import aggregate_gate_status
 from src.integrations.prodigi.fulfillment.workflow import ProdigiFulfillmentWorkflow
 from src.integrations.prodigi.repositories.prodigi_fulfillment import (
     ProdigiFulfillmentRepository,
 )
+from src.models.prodigi_fulfillment import ProdigiFulfillmentEventOrm
 from src.models.site_settings import SiteSettingsOrm
 from src.schemas.prodigi_fulfillment import (
     ProdigiFulfillmentEventRead,
     ProdigiFulfillmentGateResultRead,
     ProdigiFulfillmentJobRead,
+    ProdigiFulfillmentShipmentRead,
 )
 from src.services.orders import OrderService
 
@@ -61,6 +72,7 @@ class ProdigiFulfillmentAdminService:
         jobs = await self.repository.get_jobs_for_order(order_id)
         gates = await self.repository.get_gates_for_order(order_id)
         events = await self.repository.get_events_for_order(order_id)
+        shipments = await self.repository.get_shipments_for_order(order_id)
 
         latest_job = jobs[0] if jobs else None
         visible_gates = [gate for gate in gates if latest_job and gate.job_id == latest_job.id]
@@ -79,6 +91,11 @@ class ProdigiFulfillmentAdminService:
             visible_events,
             event_type="api_response",
             stages={"status_poll"},
+        )
+        latest_actions_event = latest_prodigi_event(
+            visible_events,
+            event_type="api_response",
+            stages={"order_actions"},
         )
         print_items = [item for item in (order.items or []) if item.prodigi_sku]
         preflight_status = preflight_status_for_job(latest_job, visible_gates)
@@ -116,6 +133,10 @@ class ProdigiFulfillmentAdminService:
             "latest_status_poll_event": serialize_event(latest_status_poll_event)
             if latest_status_poll_event
             else None,
+            "latest_actions_event": serialize_event(latest_actions_event)
+            if latest_actions_event
+            else None,
+            "prodigi_pause_visibility": serialize_pause_visibility(latest_job),
             "can_submit_manually": can_submit,
             "manual_submit_blocker": manual_submit_blocker(
                 order,
@@ -132,6 +153,7 @@ class ProdigiFulfillmentAdminService:
             "jobs": [serialize_job(job) for job in jobs],
             "gates": [serialize_gate(gate) for gate in visible_gates],
             "events": [serialize_event(event) for event in visible_events],
+            "shipments": [serialize_shipment(shipment) for shipment in shipments],
             "job_ids": [job.id for job in jobs],
         }
 
@@ -160,6 +182,141 @@ class ProdigiFulfillmentAdminService:
             )
         await ProdigiFulfillmentWorkflow(self.db.session).poll_status(latest_job)
         return await self.get_order_flow(order_id)
+
+    async def get_order_actions(self, order_id: int) -> dict:
+        latest_job = await self._require_submitted_job(order_id)
+        async with ProdigiClient(sandbox=settings.PRODIGI_SANDBOX) as client:
+            response = await client.get_order_actions(str(latest_job.prodigi_order_id))
+        self._add_action_event(
+            order_id=order_id,
+            job_id=latest_job.id,
+            stage="order_actions",
+            status="passed",
+            external_id=str(latest_job.prodigi_order_id),
+            response_payload=response,
+        )
+        await self.db.commit()
+        flow = await self.get_order_flow(order_id)
+        flow["prodigi_actions"] = response
+        return flow
+
+    async def cancel_prodigi_order(self, order_id: int) -> dict:
+        latest_job = await self._require_submitted_job(order_id)
+        async with ProdigiClient(sandbox=settings.PRODIGI_SANDBOX) as client:
+            response = await client.cancel_order(str(latest_job.prodigi_order_id))
+        self._add_action_event(
+            order_id=order_id,
+            job_id=latest_job.id,
+            stage="cancel_order",
+            status="passed",
+            external_id=str(latest_job.prodigi_order_id),
+            response_payload=response,
+        )
+        await self.db.commit()
+        await ProdigiFulfillmentWorkflow(self.db.session).poll_status(latest_job)
+        return await self.get_order_flow(order_id)
+
+    async def update_prodigi_shipping_method(
+        self,
+        order_id: int,
+        shipping_method: str,
+    ) -> dict:
+        latest_job = await self._require_submitted_job(order_id)
+        canonical = canonical_shipping_method(shipping_method)
+        async with ProdigiClient(sandbox=settings.PRODIGI_SANDBOX) as client:
+            response = await client.update_order_shipping_method(
+                str(latest_job.prodigi_order_id),
+                canonical,
+            )
+        self._add_action_event(
+            order_id=order_id,
+            job_id=latest_job.id,
+            stage="update_shipping_method",
+            status="passed",
+            external_id=str(latest_job.prodigi_order_id),
+            request_payload={"shippingMethod": canonical},
+            response_payload=response,
+        )
+        await self.db.commit()
+        await ProdigiFulfillmentWorkflow(self.db.session).poll_status(latest_job)
+        return await self.get_order_flow(order_id)
+
+    async def update_prodigi_recipient(self, order_id: int, recipient: dict[str, Any]) -> dict:
+        latest_job = await self._require_submitted_job(order_id)
+        async with ProdigiClient(sandbox=settings.PRODIGI_SANDBOX) as client:
+            response = await client.update_order_recipient(
+                str(latest_job.prodigi_order_id),
+                recipient,
+            )
+        self._add_action_event(
+            order_id=order_id,
+            job_id=latest_job.id,
+            stage="update_recipient",
+            status="passed",
+            external_id=str(latest_job.prodigi_order_id),
+            request_payload=recipient,
+            response_payload=response,
+        )
+        await self.db.commit()
+        await ProdigiFulfillmentWorkflow(self.db.session).poll_status(latest_job)
+        return await self.get_order_flow(order_id)
+
+    async def update_prodigi_metadata(self, order_id: int, metadata: dict[str, Any]) -> dict:
+        latest_job = await self._require_submitted_job(order_id)
+        async with ProdigiClient(sandbox=settings.PRODIGI_SANDBOX) as client:
+            response = await client.update_order_metadata(
+                str(latest_job.prodigi_order_id),
+                metadata,
+            )
+        self._add_action_event(
+            order_id=order_id,
+            job_id=latest_job.id,
+            stage="update_metadata",
+            status="passed",
+            external_id=str(latest_job.prodigi_order_id),
+            request_payload={"metadata": metadata},
+            response_payload=response,
+        )
+        await self.db.commit()
+        await ProdigiFulfillmentWorkflow(self.db.session).poll_status(latest_job)
+        return await self.get_order_flow(order_id)
+
+    async def _require_submitted_job(self, order_id: int):
+        latest_job = await self.repository.get_latest_job_orm_for_order(order_id)
+        if latest_job is None or not latest_job.prodigi_order_id:
+            raise InvalidDataException(
+                detail="This order has not been submitted to Prodigi yet.",
+                status_code=409,
+            )
+        return latest_job
+
+    def _add_action_event(
+        self,
+        *,
+        order_id: int,
+        job_id: int,
+        stage: str,
+        status: str,
+        external_id: str,
+        request_payload: dict[str, Any] | None = None,
+        response_payload: dict[str, Any] | None = None,
+    ) -> None:
+        self.db.session.add(
+            ProdigiFulfillmentEventOrm(
+                job_id=job_id,
+                order_id=order_id,
+                event_type="api_response",
+                stage=stage,
+                status=status,
+                external_id=external_id,
+                request_payload=json_safe(request_payload),
+                response_payload=json_safe(response_payload),
+                metadata_json={
+                    "source": "prodigi_actions",
+                    "pause_window_configured_in": "prodigi_dashboard",
+                },
+            )
+        )
 
     async def _get_or_create_settings(self) -> SiteSettingsOrm:
         settings_obj = await self.db.session.get(SiteSettingsOrm, 1)
@@ -202,6 +359,24 @@ def build_prodigi_flow_summary(
     has_prints = bool(print_items)
     submitted = job_has_been_submitted(latest_job)
     failed = latest_job is not None and latest_job.status in {"failed", "blocked"}
+    source_gate_names = [
+        "category_resolved",
+        "master_asset_available",
+        "baked_target_pixels_resolved",
+    ]
+    storefront_gate_names = [*source_gate_names, "storefront_rehydrated"]
+    live_pixel_gate_names = [
+        *storefront_gate_names,
+        "live_prodigi_pixel_contract_verified",
+        "live_prodigi_aspect_compatible",
+    ]
+    quote_gate_names = [*live_pixel_gate_names, "prodigi_quote_check"]
+    render_gate_names = [
+        *quote_gate_names,
+        "asset_rendered",
+        "rendered_asset_pixel_match",
+        "rendered_asset_md5_ready",
+    ]
 
     steps = [
         flow_step_from_gates(
@@ -234,14 +409,31 @@ def build_prodigi_flow_summary(
         flow_step_from_gates(
             key="cost_covered",
             label="Cost covered",
-            purpose="Blocks accidental loss-making fulfillment from persisted checkout economics.",
+            purpose=(
+                "Blocks accidental loss-making fulfillment from persisted checkout economics "
+                "using backend FX policy."
+            ),
             gate_names=["cost_covered"],
             gates=gates,
             fallback_status="pending",
-            fallback_detail="Run Refresh to compare paid total against Prodigi supplier cost.",
+            fallback_detail=(
+                "Run Refresh to compare converted paid total against Prodigi supplier cost."
+            ),
             fallback_measured=None,
-            fallback_expected={"customer_paid": ">= supplier_total"},
+            fallback_expected={"customer_paid_eur": ">= supplier_total_eur"},
             next_action="Fix storefront pricing, collect adjustment, or recreate the order.",
+        ),
+        flow_step_from_gates(
+            key="single_shipping_method",
+            label="Single shipping method",
+            purpose="Ensures one Prodigi order maps to one top-level shippingMethod.",
+            gate_names=["single_shipping_method"],
+            gates=gates,
+            fallback_status="pending",
+            fallback_detail="Run Refresh to verify all print items use the same shipping method.",
+            fallback_measured=None,
+            fallback_expected={"unique_shipping_method_count": "<= 1"},
+            next_action="Split fulfillment jobs by shipping method or recreate the order.",
         ),
         flow_step_from_gates(
             key="job_created",
@@ -293,6 +485,7 @@ def build_prodigi_flow_summary(
             fallback_measured=None,
             fallback_expected={"source": "active_prodigi_storefront_bake"},
             next_action="Rebuild the active bake or recreate the order from current storefront offers.",
+            blocked_by_gate_names=source_gate_names,
         ),
         flow_step_from_gates(
             key="pixel_contract",
@@ -308,6 +501,7 @@ def build_prodigi_flow_summary(
             fallback_measured=None,
             fallback_expected={"allowed_drift_px": 2},
             next_action="Refresh the bake or inspect the SKU/Product Details response.",
+            blocked_by_gate_names=storefront_gate_names,
         ),
         flow_step_from_gates(
             key="quote_check",
@@ -320,6 +514,7 @@ def build_prodigi_flow_summary(
             fallback_measured=None,
             fallback_expected={"quote_outcome": "Created|Ok"},
             next_action="Fix SKU, attributes, destination country, or shipping method.",
+            blocked_by_gate_names=live_pixel_gate_names,
         ),
         flow_step_from_gates(
             key="asset_rendered",
@@ -336,6 +531,7 @@ def build_prodigi_flow_summary(
             fallback_measured=None,
             fallback_expected={"format": "PNG", "pixels": "exact target"},
             next_action="Upload/fix the master asset or inspect render dimensions.",
+            blocked_by_gate_names=quote_gate_names,
         ),
         flow_step_from_gates(
             key="asset_public_url",
@@ -351,6 +547,7 @@ def build_prodigi_flow_summary(
                 "Configure PRINT_ASSET_STORAGE_BACKEND=s3_compatible and a public "
                 "PRINT_ASSET_PUBLIC_BASE_URL, then run Refresh again."
             ),
+            blocked_by_gate_names=render_gate_names,
         ),
         flow_step_from_gates(
             key="payload_valid",
@@ -401,6 +598,10 @@ def build_prodigi_flow_summary(
                     f"Latest Prodigi stage: {latest_job.status_stage}."
                     if has_status_update and latest_job and latest_job.status_stage
                     else "Awaiting status updates from Prodigi after order creation."
+                ),
+                "note": (
+                    "Prodigi Complete means production/shipment workflow completed. "
+                    "Customer delivered remains a manual ArtShop status unless carrier tracking is integrated."
                 ),
                 "expected": {"status_update": "webhook or GET /orders/{id} snapshot persisted"},
                 "measured": {
@@ -505,6 +706,20 @@ def serialize_webhook_status(
     }
 
 
+def serialize_pause_visibility(latest_job: ProdigiFulfillmentJobRead | None) -> dict:
+    actions_available = bool(latest_job is not None and latest_job.prodigi_order_id)
+    return {
+        "configured_in": "Prodigi dashboard",
+        "local_control": "ArtShop controls when POST /orders is sent.",
+        "prodigi_control": (
+            "After POST /orders, the Prodigi dashboard order pausing/edit window "
+            "controls whether the order is held before fulfillment."
+        ),
+        "actions_endpoint_available": actions_available,
+        "actions_endpoint_available_after_submit": actions_available,
+    }
+
+
 def manual_submit_blocker(
     order,
     print_items: list,
@@ -535,9 +750,42 @@ def flow_step_from_gates(
     fallback_expected,
     next_action: str,
     timestamp=None,
+    blocked_by_gate_names: list[str] | None = None,
 ) -> dict:
     matched = [gate for gate in gates if gate.gate in set(gate_names)]
     if not matched:
+        blockers = [
+            gate
+            for gate in gates
+            if blocked_by_gate_names
+            and gate.gate in set(blocked_by_gate_names)
+            and gate.status in {"failed", "blocked"}
+        ]
+        if blockers:
+            first_error = next((gate.error for gate in blockers if gate.error), None)
+            return {
+                "key": key,
+                "label": label,
+                "purpose": purpose,
+                "status": "blocked",
+                "detail": first_error or "Blocked by an earlier item quality gate.",
+                "expected": fallback_expected,
+                "measured": {
+                    "blocked_by": [
+                        {
+                            "gate": gate.gate,
+                            "status": gate.status,
+                            "order_item_id": gate.order_item_id,
+                            "measured": gate.measured,
+                            "error": gate.error,
+                        }
+                        for gate in blockers
+                    ]
+                },
+                "error": first_error,
+                "next_action": next_action,
+                "timestamp": max((gate.created_at for gate in blockers), default=timestamp),
+            }
         return {
             "key": key,
             "label": label,
@@ -726,6 +974,23 @@ def serialize_gate(gate: ProdigiFulfillmentGateResultRead) -> dict:
     }
 
 
+def serialize_shipment(shipment: ProdigiFulfillmentShipmentRead) -> dict:
+    return {
+        "id": shipment.id,
+        "job_id": shipment.job_id,
+        "order_id": shipment.order_id,
+        "prodigi_order_id": shipment.prodigi_order_id,
+        "prodigi_shipment_id": shipment.prodigi_shipment_id,
+        "status": shipment.status,
+        "carrier": shipment.carrier,
+        "tracking_number": shipment.tracking_number,
+        "tracking_url": shipment.tracking_url,
+        "payload": shipment.payload,
+        "created_at": shipment.created_at,
+        "updated_at": shipment.updated_at,
+    }
+
+
 def serialize_event(event: ProdigiFulfillmentEventRead) -> dict:
     return {
         "id": event.id,
@@ -742,3 +1007,9 @@ def serialize_event(event: ProdigiFulfillmentEventRead) -> dict:
         "error": event.error,
         "created_at": event.created_at,
     }
+
+
+def json_safe(payload: Any) -> Any:
+    if payload is None:
+        return None
+    return json.loads(json.dumps(payload, default=str))
