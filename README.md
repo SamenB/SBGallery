@@ -42,6 +42,47 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
+## Visual Walkthrough
+
+<!-- Uncomment images after adding screenshots to docs/readme-assets/ -->
+
+<details>
+<summary><strong>📊 Admin: Prodigi Snapshot Visualization</strong></summary>
+
+<!-- ![Prodigi Snapshot Visualization](docs/readme-assets/admin-snapshot-visualization.png) -->
+
+</details>
+
+<details>
+<summary><strong>🖼️ Admin: Artwork Master Upload & Print Readiness</strong></summary>
+
+<!-- ![Artwork Master Upload](docs/readme-assets/admin-artwork-master-upload.png) -->
+
+</details>
+
+<details>
+<summary><strong>📦 Admin: Prodigi Fulfillment Pipeline</strong></summary>
+
+<!-- ![Prodigi Fulfillment Pipeline](docs/readme-assets/admin-prodigi-fulfillment-pipeline.png) -->
+
+</details>
+
+<details>
+<summary><strong>💳 Admin: Orders & Monobank Checkout</strong></summary>
+
+<!-- ![Monobank Checkout Orders](docs/readme-assets/admin-monobank-orders.png) -->
+
+</details>
+
+<details>
+<summary><strong>🎨 Public: Storefront</strong></summary>
+
+<!-- ![Public Storefront](docs/readme-assets/public-storefront.png) -->
+
+</details>
+
+---
+
 ## Architecture
 
 The backend enforces all business correctness — the frontend presents already-resolved data.
