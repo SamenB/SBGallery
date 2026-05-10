@@ -37,28 +37,23 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 <tr><td><strong>Frontend</strong></td><td>Next.js 16 (App Router) · React 19 · TypeScript 5 strict · Tailwind CSS 4 · PostHog analytics</td></tr>
 <tr><td><strong>Infrastructure</strong></td><td>Docker Compose (12 services) · Nginx (TLS, HTTP/2, gzip, HSTS) · Let's Encrypt · GitHub Actions CI/CD</td></tr>
 <tr><td><strong>Monitoring</strong></td><td>Prometheus · Grafana · Node Exporter · Dozzle (live logs) · Loguru (structured JSON, rotating files)</td></tr>
-<tr><td><strong>Quality</strong></td><td>pytest (51 test files) · Ruff · ESLint · TypeScript strict · CI build/test gates</td></tr>
+<tr><td><strong>Quality</strong></td><td>pytest (264 tests) · Ruff · ESLint · TypeScript strict · CI build/test gates</td></tr>
 </table>
 
 ---
 
 ## Architecture
 
-The backend enforces all business correctness. The frontend presents already-resolved data.
+The backend enforces all business correctness — the frontend presents already-resolved data.
 
-```
-API Routes   →  thin HTTP mapping, auth guards, response contracts
-     ↓
-Services     →  business rules, orchestration, transaction ownership (18 services)
-     ↓
-Repositories →  data access, DataMapper pattern, base CRUD (13 repositories)
-     ↓
-Models       →  14 SQLAlchemy ORM models, 61 Alembic migrations
-```
+| Layer | Responsibility | Scale |
+|---|---|---|
+| **API Routes** | HTTP mapping, auth guards, request/response contracts | 15 modules |
+| **Services** | Business rules, orchestration, transaction ownership | 18 classes |
+| **Repositories** | Data access, DataMapper pattern, base CRUD | 13 repos via Unit of Work |
+| **Models** | Persistence shape, relationships, constraints | 14 ORM models, 61 migrations |
 
-- **Unit of Work** — `DBManager` coordinates 13 repositories in one atomic transaction with deadlock retry and exponential backoff
-- **Domain exceptions** — `ArtShopException` hierarchy globally mapped to consistent `{"detail": ...}` JSON responses
-- **Provider adapter** — `PrintProvider` abstract base class isolates vendor logic; swap print-on-demand providers without changing business code
+**Unit of Work** — `DBManager` coordinates all 13 repositories in one atomic transaction with deadlock retry. **Domain exceptions** — `ArtShopException` hierarchy globally mapped to `{"detail": ...}` JSON. **Provider adapter** — `PrintProvider` ABC isolates vendor logic; swap providers without changing business code.
 
 ### Authentication
 
@@ -96,7 +91,7 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ## Testing & Production
 
-**51 test files** across unit and integration suites with isolated test DB, safety guards, JSON mock fixtures validated through Pydantic, in-memory MockRedis, and authenticated admin client fixture.
+**264 tests** across 51 files — unit and integration suites with isolated test DB, safety guards, JSON mock fixtures validated through Pydantic, in-memory MockRedis, and authenticated admin client fixture.
 
 | Coverage | Details |
 |---|---|
