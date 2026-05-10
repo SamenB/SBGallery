@@ -27,7 +27,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## Tech Stack
+## ⚙️ Tech Stack
 
 <table>
 <tr><td><strong>Backend</strong></td><td>Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2 (async) · asyncpg · Alembic · Celery · Uvicorn</td></tr>
@@ -42,7 +42,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## Visual Walkthrough
+## 🖼️ Visual Walkthrough
 
 <!-- Uncomment images after adding screenshots to docs/readme-assets/ -->
 
@@ -83,7 +83,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 The backend enforces all business correctness — the frontend presents already-resolved data.
 
@@ -96,7 +96,9 @@ The backend enforces all business correctness — the frontend presents already-
 
 **Unit of Work** — `DBManager` coordinates all 13 repositories in one atomic transaction with deadlock retry. **Domain exceptions** — `ArtShopException` hierarchy globally mapped to `{"detail": ...}` JSON. **Provider adapter** — `PrintProvider` ABC isolates vendor logic; swap providers without changing business code.
 
-### Authentication
+---
+
+## 🔐 Authentication
 
 - **JWT access (30 min) + refresh (7 days)** in HTTP-only cookies with single-use refresh rotation
 - Refresh tokens on Redis **whitelist** (`rt:{jti}`), access tokens on Redis **blacklist** on logout (`at_bl:{token}`)
@@ -104,7 +106,9 @@ The backend enforces all business correctness — the frontend presents already-
 - **Rate limiting** — Redis-backed per-IP sliding windows: login 5/15min, register 10/1hr, OAuth 10/5min
 - **Public order references** — XOR + Base36 encoding hides sequential database IDs in URLs and emails
 
-### Checkout & Payments
+---
+
+## 💳 Checkout & Payments
 
 - **Server-owned** — the browser never dictates final prices; print economics are rehydrated from the active Prodigi storefront payload
 - **Mixed cart splitting** — originals and prints become separate order rows linked by `checkout_group_id`, paid through one Monobank invoice
@@ -112,7 +116,9 @@ The backend enforces all business correctness — the frontend presents already-
 - **Abandoned order cleanup** — Celery Beat releases locked original artworks hourly
 - **Transactional emails** — DB-driven templates (editable in admin panel), dispatched in background threads
 
-### Prodigi Print-on-Demand
+---
+
+## 🖨️ Prodigi Print-on-Demand
 
 The most architecture-heavy subsystem — **31 service modules** isolated behind the `PrintProvider` adapter:
 
@@ -130,7 +136,7 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ---
 
-## Testing & Production
+## ✅ Testing & Production
 
 **264 tests** across 51 files — unit and integration suites with isolated test DB, safety guards, JSON mock fixtures validated through Pydantic, in-memory MockRedis, and authenticated admin client fixture.
 
@@ -148,7 +154,7 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 ├── backend/
@@ -228,7 +234,7 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ---
 
-## Local Development
+## 🚀 Local Development
 
 ```bash
 cp .env.example .env        # Configure environment
