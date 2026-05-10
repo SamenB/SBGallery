@@ -136,21 +136,96 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ---
 
-## ✅ Testing & Production
+## 🖼️ Image Processing Pipeline
 
-**264 tests** across 51 files — unit and integration suites with isolated test DB, safety guards, JSON mock fixtures validated through Pydantic, in-memory MockRedis, and authenticated admin client fixture.
+Gallery images are processed asynchronously via Celery:
 
-| Coverage | Details |
+1. Upload arrives → saved to temp → Celery task dispatched
+2. Normalize color mode (RGBA/LA/P → RGB with white background compositing)
+3. Generate four WebP variants: `original` (92%), `large` 2560px (90%), `medium` 1600px (86%), `thumb` 500px (78%)
+4. LANCZOS resampling for high-quality downscaling, WebP method 6 compression
+5. Atomic database update appends variant URLs to the artwork's JSON image array
+6. Temp files cleaned up
+
+---
+
+## ✅ Testing & Quality
+
+**264 tests** across 51 files — unit and integration suites with structured fixtures and mock data:
+
+<table>
+<tr><td width="250"><strong>Area</strong></td><td><strong>What's Covered</strong></td></tr>
+<tr><td>🔐 Auth & Security</td><td>Registration, login, token lifecycle, admin guards, API contracts, config safety</td></tr>
+<tr><td>🛒 Checkout & Orders</td><td>Mixed original/print flows, cart splitting, order economics, abandoned cleanup</td></tr>
+<tr><td>💳 Payments</td><td>Monobank invoice creation, status transitions, public order references, webhook handling</td></tr>
+<tr><td>🖨️ Prodigi Catalog</td><td>Pipeline stages, storefront bake, settings, snapshot visualization, shipping policies</td></tr>
+<tr><td>📦 Prodigi Fulfillment</td><td>Order assets, print area resolution, fulfillment policy, admin actions, status mapping, callbacks, validation reports</td></tr>
+<tr><td>☁️ Assets & Storage</td><td>S3 publication, download verification, MD5 checks for provider-ready print assets</td></tr>
+<tr><td>🖼️ Image Processing</td><td>Gallery image variants, upload workflows, WebP conversion</td></tr>
+<tr><td>📊 Business Logic</td><td>Artwork services, labels, likes, email templates, contact flows, print pricing, order rehydration</td></tr>
+<tr><td>⚙️ Infrastructure</td><td>CI workflow safety checks, production prepare decider, print provider registry</td></tr>
+</table>
+
+**Test infrastructure:**
+- Isolated test database with safety guards (refuses to run against non-test database names)
+- Full schema rebuild per session via `DROP SCHEMA CASCADE` + `Base.metadata.create_all`
+- JSON mock fixtures validated through Pydantic before insertion
+- Mock Redis (in-memory) for token/rate-limit tests without external dependencies
+- Authenticated test client fixture with admin privileges
+- In-memory FastAPI cache backend
+
+**Quality gates (enforced in CI):**
+
+```bash
+# Backend
+ruff check .                    # Lint
+ruff format --check .           # Format verification
+pytest -v                       # 264 tests across 51 files
+
+# Frontend  
+npx eslint .                    # Lint
+npx tsc --noEmit                # Type checking
+npm run build                   # Production build verification
+```
+
+---
+
+## 🚢 Production Deployment
+
+### CI/CD Pipeline
+
+**CI** runs on every push/PR with concurrency control (cancels redundant runs) — 3 parallel jobs:
+
+| Job | What It Does |
 |---|---|
-| Auth & Security | Registration, login, token lifecycle, admin guards, config safety |
-| Checkout & Orders | Mixed original/print flows, cart splitting, economics, abandoned cleanup |
-| Payments | Monobank invoice creation, status transitions, webhook handling |
-| Prodigi (20+ files) | Catalog pipeline, storefront bake, fulfillment policy, order assets, sizing, shipping, callbacks |
+| **Backend Lint** | `ruff check .` + `ruff format --check .` |
+| **Frontend Lint** | `eslint .` + `tsc --noEmit` + `npm run build` |
+| **Backend Tests** | Full pytest suite with PostgreSQL + Redis service containers |
 
-**Production** — 12 Docker services with health checks, dependency ordering, and persistent volumes. CI runs on every push (3 parallel jobs: backend lint, frontend lint/build, backend tests with Postgres + Redis). CD deploys to production via SSH after CI passes on main — `docker compose up --build` → Alembic migration → Prodigi auto-rebuild if stale.
+**CD** triggers automatically after CI passes on `main`:
 
-**Nginx:** TLS · HTTP/2 · gzip · HSTS · security headers · rate limiting · restricted Swagger · Grafana/Dozzle subpath routing.
-**Backup:** Automated `pg_dump` + rclone differential media sync to Google Drive.
+`SSH connect` → `git fetch/reset` → `docker compose up --build` → `Alembic migrate` → `Prodigi auto-rebuild if stale` → `image prune`
+
+### Production Stack — 12 Services
+
+| Service | Container | Role |
+|---|---|---|
+| 🐘 **Database** | `artshop_db` | PostgreSQL 15 with persistent volumes and health checks |
+| ⚡ **Cache/Broker** | `artshop_redis` | Redis 7 — cache, token state, Celery broker |
+| 📋 **Migrator** | `artshop_migrator` | One-shot Alembic migration runner (exits after completion) |
+| 📁 **Media Init** | `artshop_media_init` | Volume permission repair (root → appuser) |
+| 🔧 **API** | `artshop_api` | FastAPI backend (non-root user, no port exposed to host) |
+| ⚙️ **Worker** | `artshop_worker` | Celery background worker for async jobs |
+| ⏰ **Beat** | `artshop_beat` | Celery Beat for scheduled tasks |
+| ⚛️ **Frontend** | `artshop_frontend` | Next.js production build with persistent cache |
+| 🔒 **Nginx** | `artshop_nginx` | Reverse proxy, TLS, HTTP/2, gzip, rate limiting, security headers |
+| 📊 **Prometheus** | `monitoring_prom` | Metrics collection (15-day retention) |
+| 📈 **Grafana** | `monitoring_grafana` | Dashboard UI (served from `/grafana/` subpath) |
+| 📋 **Dozzle** | `monitoring_dozzle` | Live container logs (password-protected via Nginx Basic Auth) |
+
+**Nginx security:** HTTP→HTTPS redirect, HSTS, X-Frame-Options, X-Content-Type-Options, XSS protection, restricted Swagger/OpenAPI access, rate-limited API endpoints.
+
+**Backup:** Automated daily script — `pg_dump` to Google Drive via rclone + differential media sync from Docker volumes.
 
 ---
 
@@ -201,7 +276,7 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 │           ├── db_manager.py                    #   Unit of Work — 13 repos, deadlock retry
 │           └── order_public_code.py             #   XOR + Base36 order reference encoding
 │
-├── backend/tests/                               # 51 test files
+├── backend/tests/                               # 51 test files (264 tests)
 │   ├── unit_tests/services/                     #   30 service tests (Prodigi, orders, auth)
 │   ├── unit_tests/schemas/                      #   Schema validation tests
 │   ├── unit_tests/tasks/                        #   Celery task tests
@@ -242,8 +317,22 @@ make infra                   # PostgreSQL + Redis in Docker
 make migrate                 # Alembic migrations
 make api                     # FastAPI with hot reload
 make frontend                # Next.js dev server
-make test                    # Run backend test suite
+make worker                  # Celery worker (optional)
+make beat                    # Celery Beat scheduler (optional)
+make test                    # Run 264 backend tests
+make lint                    # Ruff lint + format check
 ```
+
+---
+
+## 💡 What This Project Demonstrates
+
+- **Backend source-of-truth design** — money, shipping, payment state, and fulfillment logic never lives in the frontend
+- **Real external system integration** — provider-specific logic isolated behind adapter boundaries, not scattered across the codebase
+- **Durable catalog pipelines** — materialized read models instead of live API probes in customer-facing hot paths
+- **Asynchronous commerce workflows** — persisted jobs, events, retries, callbacks, and admin diagnostics
+- **Production deployment as part of the product** — CI/CD, TLS, monitoring, backup, health checks are not afterthoughts
+- **Comprehensive test coverage** — business rules, APIs, payment flows, fulfillment, and infrastructure safety checks
 
 ---
 
@@ -254,3 +343,4 @@ make test                    # Run backend test suite
 Built by [Semen Bondarenko](https://github.com/SamenB)
 
 </div>
+
