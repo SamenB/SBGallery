@@ -49,7 +49,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 <details>
 <summary><strong>📊 Admin: Prodigi Snapshot Visualization</strong></summary>
 
-<!-- ![Prodigi Snapshot Visualization](docs/readme-assets/admin-snapshot-visualization.png) -->
+![Prodigi Snapshot Visualization](docs/readme-assets/admin-snapshot-visualization.png)
 
 </details>
 
