@@ -13,6 +13,49 @@
   color: var(--color-cream);
   border-color: rgba(250, 250, 247, 0.2);
 }
+.home-hero {
+  height: calc(100lvh - clamp(63px, 42px + 2vw, 117px));
+  min-height: calc(100lvh - clamp(63px, 42px + 2vw, 117px));
+}
+@media (max-width: 768px) {
+  .home-hero {
+    height: calc(100lvh - 63px + env(safe-area-inset-bottom, 0px) + 24px);
+    min-height: calc(100lvh - 63px + env(safe-area-inset-bottom, 0px) + 24px);
+  }
+}
+.home-hero-text-link {
+  display: inline-block;
+  padding-bottom: 0.12em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.84);
+  color: rgba(255, 255, 255, 0.96);
+  font-family: "Didot", "Bodoni MT", "Times New Roman", serif;
+  font-size: clamp(1.2rem, 5.6vw, 1.65rem);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.42),
+    0 1px 3px rgba(0, 0, 0, 0.46);
+  transition:
+    color 180ms ease,
+    text-shadow 180ms ease;
+}
+.home-hero-text-link:hover,
+.home-hero-text-link:focus-visible {
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.98);
+  text-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.5),
+    0 1px 4px rgba(0, 0, 0, 0.55);
+}
+.home-hero-text-link:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.78);
+  outline-offset: 6px;
+}
 .home-section-link {
   color: var(--color-charcoal-mid);
   border-color: var(--color-border-dark);
@@ -167,7 +210,35 @@ img {
   -webkit-touch-callout: none;
   user-select: none;
 }
-a:active,
 a:focus {
   background-color: transparent !important;
+}
+
+@keyframes text-shine-anim {
+  0%, 70% { background-position: -100% center; }
+  100% { background-position: 200% center; }
+}
+.text-shine {
+  background: linear-gradient(
+    110deg,
+    var(--color-charcoal) 0%,
+    var(--color-charcoal) 40%,
+    rgba(140, 140, 140, 0.8) 50%,
+    var(--color-charcoal) 60%,
+    var(--color-charcoal) 100%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: text-shine-anim 4s linear infinite;
+}
+
+@keyframes border-shine-anim {
+  0%, 70% { border-color: rgba(26,26,24,1); }
+  85% { border-color: rgba(26,26,24,0.2); }
+  100% { border-color: rgba(26,26,24,1); }
+}
+.border-shine {
+  animation: border-shine-anim 4s ease-in-out infinite;
 }
