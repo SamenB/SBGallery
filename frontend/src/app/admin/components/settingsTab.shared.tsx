@@ -4,6 +4,16 @@ import { getImageUrl } from "@/utils";
 
 export interface SiteSettings {
   about_text: string | null;
+  artist_home_heading: string | null;
+  artist_home_quote: string | null;
+  about_page_eyebrow: string | null;
+  about_page_title: string | null;
+  about_section_title: string | null;
+  about_secondary_text: string | null;
+  about_philosophy_title: string | null;
+  about_philosophy_text: string | null;
+  about_exhibitions_title: string | null;
+  about_exhibitions_text: string | null;
   contact_email: string | null;
   artist_home_photo_url: string | null;
   artist_about_photo_url: string | null;

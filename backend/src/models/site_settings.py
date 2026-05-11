@@ -21,6 +21,16 @@ class SiteSettingsOrm(Base):
 
     # Texts
     about_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    artist_home_heading: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    artist_home_quote: Mapped[str | None] = mapped_column(Text, nullable=True)
+    about_page_eyebrow: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    about_page_title: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    about_section_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    about_secondary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    about_philosophy_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    about_philosophy_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    about_exhibitions_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    about_exhibitions_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     contact_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     owner_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     owner_email: Mapped[str | None] = mapped_column(String(200), nullable=True)

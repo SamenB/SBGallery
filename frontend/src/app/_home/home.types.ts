@@ -19,12 +19,17 @@ export interface HomeArtwork {
   original_status: OriginalStatus;
   has_prints?: boolean;
   base_print_price?: number;
+  width_cm?: number;
+  height_cm?: number;
+  width_in?: number;
+  height_in?: number;
   images?: (
     | string
     | { thumb?: string; medium?: string; large?: string; original?: string }
   )[];
   gradientFrom?: string;
   gradientTo?: string;
+  labels?: { id: number; title: string; category_id?: number }[];
 }
 
 export interface HomeSettings {
@@ -32,6 +37,8 @@ export interface HomeSettings {
   main_bg_mobile_url?: string | null;
   artist_home_photo_url?: string | null;
   about_text?: string | null;
+  artist_home_heading?: string | null;
+  artist_home_quote?: string | null;
 }
 
 export type HomeArtworkPayload =

@@ -27,7 +27,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
 <table>
 <tr><td><strong>Backend</strong></td><td>Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2 (async) · asyncpg · Alembic · Celery · Uvicorn</td></tr>
@@ -42,7 +42,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## 🖼️ Visual Walkthrough
+## Visual Walkthrough
 
 <!-- Uncomment images after adding screenshots to docs/readme-assets/ -->
 
@@ -83,7 +83,7 @@ Fully designed and built by me: backend architecture, system design, admin tooli
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 The backend enforces all business correctness — the frontend presents already-resolved data.
 
@@ -96,9 +96,7 @@ The backend enforces all business correctness — the frontend presents already-
 
 **Unit of Work** — `DBManager` coordinates all 13 repositories in one atomic transaction with deadlock retry. **Domain exceptions** — `ArtShopException` hierarchy globally mapped to `{"detail": ...}` JSON. **Provider adapter** — `PrintProvider` ABC isolates vendor logic; swap providers without changing business code.
 
----
-
-## 🔐 Authentication
+### Authentication
 
 - **JWT access (30 min) + refresh (7 days)** in HTTP-only cookies with single-use refresh rotation
 - Refresh tokens on Redis **whitelist** (`rt:{jti}`), access tokens on Redis **blacklist** on logout (`at_bl:{token}`)
@@ -106,9 +104,7 @@ The backend enforces all business correctness — the frontend presents already-
 - **Rate limiting** — Redis-backed per-IP sliding windows: login 5/15min, register 10/1hr, OAuth 10/5min
 - **Public order references** — XOR + Base36 encoding hides sequential database IDs in URLs and emails
 
----
-
-## 💳 Checkout & Payments
+### Checkout & Payments
 
 - **Server-owned** — the browser never dictates final prices; print economics are rehydrated from the active Prodigi storefront payload
 - **Mixed cart splitting** — originals and prints become separate order rows linked by `checkout_group_id`, paid through one Monobank invoice
@@ -116,9 +112,7 @@ The backend enforces all business correctness — the frontend presents already-
 - **Abandoned order cleanup** — Celery Beat releases locked original artworks hourly
 - **Transactional emails** — DB-driven templates (editable in admin panel), dispatched in background threads
 
----
-
-## 🖨️ Prodigi Print-on-Demand
+### Prodigi Print-on-Demand
 
 The most architecture-heavy subsystem — **31 service modules** isolated behind the `PrintProvider` adapter:
 
@@ -136,100 +130,25 @@ Raw CSV → Curator → Parser → Planner → Baker → Materializer → Read M
 
 ---
 
-## 🖼️ Image Processing Pipeline
+## Testing & Production
 
-Gallery images are processed asynchronously via Celery:
+**264 tests** across 51 files — unit and integration suites with isolated test DB, safety guards, JSON mock fixtures validated through Pydantic, in-memory MockRedis, and authenticated admin client fixture.
 
-1. Upload arrives → saved to temp → Celery task dispatched
-2. Normalize color mode (RGBA/LA/P → RGB with white background compositing)
-3. Generate four WebP variants: `original` (92%), `large` 2560px (90%), `medium` 1600px (86%), `thumb` 500px (78%)
-4. LANCZOS resampling for high-quality downscaling, WebP method 6 compression
-5. Atomic database update appends variant URLs to the artwork's JSON image array
-6. Temp files cleaned up
-
----
-
-## ✅ Testing & Quality
-
-**264 tests** across 51 files — unit and integration suites with structured fixtures and mock data:
-
-<table>
-<tr><td width="250"><strong>Area</strong></td><td><strong>What's Covered</strong></td></tr>
-<tr><td>🔐 Auth & Security</td><td>Registration, login, token lifecycle, admin guards, API contracts, config safety</td></tr>
-<tr><td>🛒 Checkout & Orders</td><td>Mixed original/print flows, cart splitting, order economics, abandoned cleanup</td></tr>
-<tr><td>💳 Payments</td><td>Monobank invoice creation, status transitions, public order references, webhook handling</td></tr>
-<tr><td>🖨️ Prodigi Catalog</td><td>Pipeline stages, storefront bake, settings, snapshot visualization, shipping policies</td></tr>
-<tr><td>📦 Prodigi Fulfillment</td><td>Order assets, print area resolution, fulfillment policy, admin actions, status mapping, callbacks, validation reports</td></tr>
-<tr><td>☁️ Assets & Storage</td><td>S3 publication, download verification, MD5 checks for provider-ready print assets</td></tr>
-<tr><td>🖼️ Image Processing</td><td>Gallery image variants, upload workflows, WebP conversion</td></tr>
-<tr><td>📊 Business Logic</td><td>Artwork services, labels, likes, email templates, contact flows, print pricing, order rehydration</td></tr>
-<tr><td>⚙️ Infrastructure</td><td>CI workflow safety checks, production prepare decider, print provider registry</td></tr>
-</table>
-
-**Test infrastructure:**
-- Isolated test database with safety guards (refuses to run against non-test database names)
-- Full schema rebuild per session via `DROP SCHEMA CASCADE` + `Base.metadata.create_all`
-- JSON mock fixtures validated through Pydantic before insertion
-- Mock Redis (in-memory) for token/rate-limit tests without external dependencies
-- Authenticated test client fixture with admin privileges
-- In-memory FastAPI cache backend
-
-**Quality gates (enforced in CI):**
-
-```bash
-# Backend
-ruff check .                    # Lint
-ruff format --check .           # Format verification
-pytest -v                       # 264 tests across 51 files
-
-# Frontend  
-npx eslint .                    # Lint
-npx tsc --noEmit                # Type checking
-npm run build                   # Production build verification
-```
-
----
-
-## 🚢 Production Deployment
-
-### CI/CD Pipeline
-
-**CI** runs on every push/PR with concurrency control (cancels redundant runs) — 3 parallel jobs:
-
-| Job | What It Does |
+| Coverage | Details |
 |---|---|
-| **Backend Lint** | `ruff check .` + `ruff format --check .` |
-| **Frontend Lint** | `eslint .` + `tsc --noEmit` + `npm run build` |
-| **Backend Tests** | Full pytest suite with PostgreSQL + Redis service containers |
+| Auth & Security | Registration, login, token lifecycle, admin guards, config safety |
+| Checkout & Orders | Mixed original/print flows, cart splitting, economics, abandoned cleanup |
+| Payments | Monobank invoice creation, status transitions, webhook handling |
+| Prodigi (20+ files) | Catalog pipeline, storefront bake, fulfillment policy, order assets, sizing, shipping, callbacks |
 
-**CD** triggers automatically after CI passes on `main`:
+**Production** — 12 Docker services with health checks, dependency ordering, and persistent volumes. CI runs on every push (3 parallel jobs: backend lint, frontend lint/build, backend tests with Postgres + Redis). CD deploys to production via SSH after CI passes on main — `docker compose up --build` → Alembic migration → Prodigi auto-rebuild if stale.
 
-`SSH connect` → `git fetch/reset` → `docker compose up --build` → `Alembic migrate` → `Prodigi auto-rebuild if stale` → `image prune`
-
-### Production Stack — 12 Services
-
-| Service | Container | Role |
-|---|---|---|
-| 🐘 **Database** | `artshop_db` | PostgreSQL 15 with persistent volumes and health checks |
-| ⚡ **Cache/Broker** | `artshop_redis` | Redis 7 — cache, token state, Celery broker |
-| 📋 **Migrator** | `artshop_migrator` | One-shot Alembic migration runner (exits after completion) |
-| 📁 **Media Init** | `artshop_media_init` | Volume permission repair (root → appuser) |
-| 🔧 **API** | `artshop_api` | FastAPI backend (non-root user, no port exposed to host) |
-| ⚙️ **Worker** | `artshop_worker` | Celery background worker for async jobs |
-| ⏰ **Beat** | `artshop_beat` | Celery Beat for scheduled tasks |
-| ⚛️ **Frontend** | `artshop_frontend` | Next.js production build with persistent cache |
-| 🔒 **Nginx** | `artshop_nginx` | Reverse proxy, TLS, HTTP/2, gzip, rate limiting, security headers |
-| 📊 **Prometheus** | `monitoring_prom` | Metrics collection (15-day retention) |
-| 📈 **Grafana** | `monitoring_grafana` | Dashboard UI (served from `/grafana/` subpath) |
-| 📋 **Dozzle** | `monitoring_dozzle` | Live container logs (password-protected via Nginx Basic Auth) |
-
-**Nginx security:** HTTP→HTTPS redirect, HSTS, X-Frame-Options, X-Content-Type-Options, XSS protection, restricted Swagger/OpenAPI access, rate-limited API endpoints.
-
-**Backup:** Automated daily script — `pg_dump` to Google Drive via rclone + differential media sync from Docker volumes.
+**Nginx:** TLS · HTTP/2 · gzip · HSTS · security headers · rate limiting · restricted Swagger · Grafana/Dozzle subpath routing.
+**Backup:** Automated `pg_dump` + rclone differential media sync to Google Drive.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── backend/
@@ -254,6 +173,81 @@ npm run build                   # Production build verification
 │       │
 │       ├── models/                              # 14 SQLAlchemy ORM models
 │       ├── schemas/                             # Pydantic v2 DTOs (request / response)
+│       │
+│       ├── integrations/prodigi/                # Prodigi provider boundary (31 modules)
+│       │   ├── catalog_pipeline/                #   Raw CSV → Curate → Parse → Plan
+│       │   ├── services/                        #   Storefront bake, materialization,
+│       │   │                                    #   fulfillment, order assets, sizing,
+│       │   │                                    #   shipping policy, snapshot, settings
+│       │   ├── fulfillment/                     #   Preflight gates, submit, retry, track
+│       │   ├── api/                             #   Admin routes, webhooks, diagnostics
+│       │   └── tasks/                           #   Maintenance CLI tools
+│       │
+│       ├── print_on_demand/                     # Abstract provider adapter (strategy)
+│       │   ├── base.py                          #   PrintProvider ABC — vendor contract
+│       │   └── registry.py                      #   Provider lookup + singleton cache
+│       │
+│       ├── tasks/                               # Celery workers + Beat schedules
+│       ├── middleware/                          # Redis-based rate limiting
+│       ├── connectors/                          # Telegram Bot, Redis manager
+│       ├── migrations/                          # 61 Alembic versions
+│       └── utils/
+│           ├── db_manager.py                    #   Unit of Work — 13 repos, deadlock retry
+│           └── order_public_code.py             #   XOR + Base36 order reference encoding
+│
+├── backend/tests/                               # 51 test files
+│   ├── unit_tests/services/                     #   30 service tests (Prodigi, orders, auth)
+│   ├── unit_tests/schemas/                      #   Schema validation tests
+│   ├── unit_tests/tasks/                        #   Celery task tests
+│   ├── integration_tests/                       #   Full API endpoint flows
+│   ├── mocks/                                   #   JSON fixtures (users, artworks, orders)
+│   └── conftest.py                              #   DB setup, MockRedis, auth fixtures
+│
+├── frontend/src/
+│   ├── app/                                     # Next.js 16 App Router
+│   │   ├── admin/                               #   Admin dashboard — 50+ components
+│   │   │   └── components/                      #   Orders, Prodigi hub, artwork management,
+│   │   │                                        #   fulfillment, storefront settings, email
+│   │   │                                        #   templates, labels, print pricing
+│   │   ├── artwork/[slug]/                      #   Artwork detail + print configurator
+│   │   ├── shop/                                #   Storefront with country-aware pricing
+│   │   ├── checkout/                            #   Multi-step checkout flow
+│   │   └── gallery/, about/, contact/, faq/     #   Content pages
+│   ├── components/                              #   Shared UI (Navbar, Footer, Cart, Auth)
+│   ├── context/                                 #   Cart, User, Preferences providers
+│   └── hooks/                                   #   Custom React hooks
+│
+├── nginx/nginx.conf                             # TLS, HTTP/2, rate limits, security headers
+├── monitoring/prometheus.yml                    # Metrics collection config
+├── scripts/backup.sh                            # pg_dump + rclone to Google Drive
+├── .github/workflows/                           # CI (lint + test) + CD (SSH deploy)
+├── docker-compose.yml                           # Local dev (Postgres + Redis)
+├── docker-compose.prod.yml                      # Production (12 services)
+└── Makefile                                     # Developer commands
+```
+
+---
+
+## Local Development
+
+```bash
+cp .env.example .env        # Configure environment
+make infra                   # PostgreSQL + Redis in Docker
+make migrate                 # Alembic migrations
+make api                     # FastAPI with hot reload
+make frontend                # Next.js dev server
+make test                    # Run backend test suite
+```
+
+---
+
+<div align="center">
+
+[PolyForm Noncommercial License 1.0.0](LICENSE)
+
+Built by [Semen Bondarenko](https://github.com/SamenB)
+
+</div>
 │       │
 │       ├── integrations/prodigi/                # Prodigi provider boundary (31 modules)
 │       │   ├── catalog_pipeline/                #   Raw CSV → Curate → Parse → Plan

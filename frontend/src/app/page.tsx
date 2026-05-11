@@ -2,7 +2,7 @@ import { getHomeData } from "./_home/home.data";
 import { HomeHero } from "./_home/HomeHero";
 import {
   ArtistIntroSection,
-  QuoteSection,
+  HomeSectionDivider,
   RecentPaintingsSection,
 } from "./_home/HomeSections";
 
@@ -14,9 +14,10 @@ export default async function Home() {
   return (
     <>
       <HomeHero settings={settings} />
+      <HomeSectionDivider />
       <RecentPaintingsSection featuredWorks={featuredWorks} />
+      <HomeSectionDivider />
       <ArtistIntroSection settings={settings} />
-      <QuoteSection />
     </>
   );
 }

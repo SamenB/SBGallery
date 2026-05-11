@@ -154,7 +154,7 @@ class ArtworksRepository(BaseRepository):
             orientation=orientation,
             size_category=size_category,
         )
-        query = query.limit(limit).offset(offset)
+        query = query.order_by(self.model.id.desc()).limit(limit).offset(offset)
 
         result = await self.session.execute(query)
         return [

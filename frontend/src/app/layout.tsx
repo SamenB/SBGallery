@@ -5,7 +5,7 @@
  * and context providers (ClientProviders) for all pages.
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -32,6 +32,12 @@ export const metadata: Metadata = {
     siteName: "Samen Bondarenko Gallery",
     locale: "en_US",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 /**

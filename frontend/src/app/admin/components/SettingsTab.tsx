@@ -71,6 +71,58 @@ export default function SettingsTab() {
         title="Artist Profile"
         desc="Text and contact info used across the site"
       >
+        <FieldGroup label="Homepage Artist Heading">
+          <input
+            type="text"
+            name="artist_home_heading"
+            value={settings.artist_home_heading || ""}
+            onChange={handleChange}
+            className={settingsInputClass}
+            placeholder="The Artist"
+          />
+        </FieldGroup>
+        <FieldGroup label="Homepage Artist Quote">
+          <textarea
+            name="artist_home_quote"
+            value={settings.artist_home_quote || ""}
+            onChange={handleChange}
+            rows={3}
+            className={`${settingsInputClass} resize-y leading-relaxed`}
+            placeholder="I paint not what I see, but what I feel when I look."
+          />
+        </FieldGroup>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FieldGroup label="About Page Eyebrow">
+            <input
+              type="text"
+              name="about_page_eyebrow"
+              value={settings.about_page_eyebrow || ""}
+              onChange={handleChange}
+              className={settingsInputClass}
+              placeholder="About the Artist"
+            />
+          </FieldGroup>
+          <FieldGroup label="About Page Main Title">
+            <input
+              type="text"
+              name="about_page_title"
+              value={settings.about_page_title || ""}
+              onChange={handleChange}
+              className={settingsInputClass}
+              placeholder="A Dialogue with Canvas and Light"
+            />
+          </FieldGroup>
+        </div>
+        <FieldGroup label="About Section Title">
+          <input
+            type="text"
+            name="about_section_title"
+            value={settings.about_section_title || ""}
+            onChange={handleChange}
+            className={settingsInputClass}
+            placeholder="The Journey"
+          />
+        </FieldGroup>
         <FieldGroup label="About the Artist">
           <textarea
             name="about_text"
@@ -79,6 +131,58 @@ export default function SettingsTab() {
             rows={5}
             className={`${settingsInputClass} resize-y leading-relaxed`}
             placeholder="Enter short bio..."
+          />
+        </FieldGroup>
+        <FieldGroup label="About Secondary Text">
+          <textarea
+            name="about_secondary_text"
+            value={settings.about_secondary_text || ""}
+            onChange={handleChange}
+            rows={4}
+            className={`${settingsInputClass} resize-y leading-relaxed`}
+            placeholder="Optional second paragraph for the About page..."
+          />
+        </FieldGroup>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FieldGroup label="Philosophy Title">
+            <input
+              type="text"
+              name="about_philosophy_title"
+              value={settings.about_philosophy_title || ""}
+              onChange={handleChange}
+              className={settingsInputClass}
+              placeholder="Philosophy"
+            />
+          </FieldGroup>
+          <FieldGroup label="Exhibitions Title">
+            <input
+              type="text"
+              name="about_exhibitions_title"
+              value={settings.about_exhibitions_title || ""}
+              onChange={handleChange}
+              className={settingsInputClass}
+              placeholder="Selected Exhibitions"
+            />
+          </FieldGroup>
+        </div>
+        <FieldGroup label="Philosophy Text">
+          <textarea
+            name="about_philosophy_text"
+            value={settings.about_philosophy_text || ""}
+            onChange={handleChange}
+            rows={4}
+            className={`${settingsInputClass} resize-y leading-relaxed`}
+            placeholder="Artist philosophy shown on the About page..."
+          />
+        </FieldGroup>
+        <FieldGroup label="Exhibitions Text">
+          <textarea
+            name="about_exhibitions_text"
+            value={settings.about_exhibitions_text || ""}
+            onChange={handleChange}
+            rows={4}
+            className={`${settingsInputClass} resize-y leading-relaxed`}
+            placeholder={"One exhibition per line. Leave empty to hide the block."}
           />
         </FieldGroup>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

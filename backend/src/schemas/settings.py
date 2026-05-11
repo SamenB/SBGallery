@@ -18,6 +18,16 @@ class SiteSettingsBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     about_text: Optional[str] = None
+    artist_home_heading: Optional[str] = None
+    artist_home_quote: Optional[str] = None
+    about_page_eyebrow: Optional[str] = None
+    about_page_title: Optional[str] = None
+    about_section_title: Optional[str] = None
+    about_secondary_text: Optional[str] = None
+    about_philosophy_title: Optional[str] = None
+    about_philosophy_text: Optional[str] = None
+    about_exhibitions_title: Optional[str] = None
+    about_exhibitions_text: Optional[str] = None
     contact_email: Optional[str] = None
     owner_name: Optional[str] = None
     owner_email: Optional[str] = None

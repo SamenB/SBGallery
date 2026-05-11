@@ -114,7 +114,7 @@ class OrderItemBase(BaseModel):
     Base schema for individual items within an order.
     """
 
-    artwork_id: int
+    artwork_id: Optional[int] = None
     edition_type: EditionType
     finish: str
     size: Optional[str] = None

@@ -328,7 +328,7 @@ export default function Footer() {
           </Link>{" "}
           <nav className="footer-nav">
             {" "}
-            <Link href="/about">About</Link> <Link href="/contact">Contact</Link> <Link href="/shipping">Shipping</Link>{" "}
+            <Link href="/about">About the Artist</Link> <Link href="/contact">Contact</Link> <Link href="/shipping">Shipping</Link>{" "}
             <Link href="/faq">FAQ</Link> <Link href="/terms">Terms</Link> <Link href="/privacy">Privacy</Link>{" "}
             <span className="footer-copyright">© {year}</span>{" "}
           </nav>{" "}
