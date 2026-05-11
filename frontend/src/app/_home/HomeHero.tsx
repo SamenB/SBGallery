@@ -43,20 +43,7 @@ export function HomeHero({ settings }: { settings: HomeSettings }) {
       />
 
       <div className="relative z-[2] flex h-full w-full flex-col items-center gap-[clamp(1.5rem,3vh,2.5rem)] px-8">
-        <div className="max-w-[900px] text-center">
-          <div className="animate-fade-up mb-2 [animation-delay:0.15s] [animation-fill-mode:forwards]">
-            <p className="font-serif text-[clamp(1.5rem,3.2vw,2.5rem)] font-normal italic leading-[1.6] tracking-[0.06em] text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.5)]">
-              Original Paintings &amp; Fine Art Prints
-            </p>
-          </div>
-          <div className="animate-fade-up mx-auto mt-4 max-w-[600px] [animation-delay:0.3s] [animation-fill-mode:forwards]">
-            <p className="font-sans text-[clamp(0.95rem,1.5vw,1.2rem)] font-normal leading-[1.8] tracking-[0.05em] text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.4),0_1px_3px_rgba(0,0,0,0.5)]">
-              Discover a collection of original artworks.
-            </p>
-          </div>
-        </div>
-
-        <div className="animate-fade-up absolute left-1/2 bottom-[20%] flex -translate-x-1/2 flex-col items-center gap-4 whitespace-nowrap px-8 scale-[0.7] md:scale-100 [animation-delay:0.5s] [animation-fill-mode:forwards]">
+        <div className="animate-fade-up absolute left-1/2 bottom-[20%] flex -translate-x-1/2 flex-col items-center gap-4 whitespace-nowrap px-8 scale-[0.7] md:scale-[0.8] [animation-delay:0.5s] [animation-fill-mode:forwards]">
           {HERO_LINKS.map((link) => (
             <Link
               key={link.href}

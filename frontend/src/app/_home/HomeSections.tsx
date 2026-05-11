@@ -54,7 +54,7 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
         
         {/* Mobile Heading */}
         <div className="order-1 md:hidden">
-          <p className="font-sans text-[clamp(0.72rem,0.9vw,0.86rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)]">
+          <p className="font-sans text-[clamp(0.85rem,1.2vw,1rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)]">
             {artistHeading}
           </p>
         </div>
@@ -74,11 +74,11 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
 
         {/* Text Content */}
         <div className="order-3 flex flex-col md:order-2">
-          <p className="mb-4 hidden font-sans text-[clamp(0.72rem,0.9vw,0.86rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)] md:block">
+          <p className="mb-4 hidden font-sans text-[clamp(0.85rem,1.2vw,1rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)] md:block">
             {artistHeading}
           </p>
           <blockquote className="mb-12 max-w-[540px]">
-            <p className="font-serif text-[clamp(1.2rem,5.6vw,1.65rem)] font-normal uppercase tracking-[0.08em] text-[var(--color-charcoal)] md:text-[clamp(1.7rem,3vw,2.5rem)] md:normal-case md:tracking-normal">
+            <p className="font-serif text-[clamp(1.4rem,5.6vw,1.8rem)] font-normal italic leading-relaxed text-[var(--color-charcoal)] md:text-[clamp(1.8rem,3vw,2.6rem)]">
               &ldquo;{artistQuote}&rdquo;
             </p>
           </blockquote>

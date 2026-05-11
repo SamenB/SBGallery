@@ -190,37 +190,10 @@ export default function AboutPage() {
               </p>
             </div>
 
-            <div style={{ height: "1px", backgroundColor: "var(--color-border)" }} />
-
-            <div>
-              <h3
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  fontSize: "1.75rem",
-                  fontStyle: "italic",
-                  fontWeight: 400,
-                  color: "var(--color-charcoal)",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                {philosophyTitle}
-              </h3>
-              <p
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "1rem",
-                  color: "var(--color-charcoal-mid)",
-                  lineHeight: 1.8,
-                  fontWeight: 300,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {philosophyText}
-              </p>
-            </div>
-
             {exhibitions.length > 0 ? (
-              <div style={{ marginTop: "20px" }}>
+              <>
+                <div style={{ height: "1px", backgroundColor: "var(--color-border)" }} />
+                <div style={{ marginTop: "10px" }}>
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
@@ -257,8 +230,42 @@ export default function AboutPage() {
                   ))}
                 </ul>
               </div>
+              </>
             ) : null}
           </div>
+        </div>
+        <div
+          style={{
+            marginTop: "80px",
+            opacity: isVisible ? 1 : 0,
+            transition: "opacity 1.2s ease 0.8s",
+          }}
+        >
+          <div style={{ height: "1px", backgroundColor: "var(--color-border)", marginBottom: "40px" }} />
+          <h3
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: "1.75rem",
+              fontStyle: "italic",
+              fontWeight: 400,
+              color: "var(--color-charcoal)",
+              marginBottom: "1.5rem",
+            }}
+          >
+            {philosophyTitle}
+          </h3>
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "1rem",
+              color: "var(--color-charcoal-mid)",
+              lineHeight: 1.8,
+              fontWeight: 300,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {philosophyText}
+          </p>
         </div>
       </div>
     </div>
