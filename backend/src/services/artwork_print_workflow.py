@@ -125,6 +125,7 @@ class ArtworkPrintWorkflowService:
             size_catalog = await self._apply_canvas_wrap_to_size_catalog(
                 size_catalog=size_catalog,
                 selected_wrap=selected_canvas_wrap,
+                allow_live_resolution=False,
             )
 
         print_enabled = self._artwork_has_prints(artwork)
@@ -210,6 +211,7 @@ class ArtworkPrintWorkflowService:
                 size_catalog = await self._apply_canvas_wrap_to_size_catalog(
                     size_catalog=size_catalog,
                     selected_wrap=selected_canvas_wrap,
+                    allow_live_resolution=False,
                 )
             print_enabled = self._artwork_has_prints(artwork)
             orientation = str(getattr(artwork, "orientation", "") or "").lower()
@@ -1523,13 +1525,44 @@ class ArtworkPrintWorkflowService:
         *,
         size_catalog: dict[str, dict[str, Any]],
         selected_wrap: str,
+        allow_live_resolution: bool = True,
     ) -> dict[str, dict[str, Any]]:
         if not size_catalog:
+            return size_catalog
+
+        if not allow_live_resolution:
+            resolver = ProdigiPrintAreaResolver()
+            for category_id in WRAPPED_CANVAS_CATEGORIES:
+                for dims in size_catalog.get(category_id, {}).values():
+                    if self._dims_already_match_canvas_wrap(
+                        dims=dims,
+                        selected_wrap=selected_wrap,
+                    ):
+                        continue
+                    resolved = resolver._resolve_from_physical_size(
+                        supplier_size_inches=dims.get("supplier_size_inches"),
+                        supplier_size_cm=dims.get("supplier_size_cm"),
+                        slot_size_label=dims.get("label"),
+                        wrap_margin_pct=0.0,
+                    )
+                    dimensions = self._normalize_print_area_dimensions(
+                        resolved.get("print_area_dimensions")
+                    )
+                    dimensions["variant_attributes"] = {"wrap": selected_wrap}
+                    self._apply_resolved_canvas_dimensions(
+                        dims=dims,
+                        resolved={**resolved, "print_area_dimensions": dimensions},
+                    )
             return size_catalog
 
         async with ProdigiPrintAreaResolver() as resolver:
             for category_id in WRAPPED_CANVAS_CATEGORIES:
                 for dims in size_catalog.get(category_id, {}).values():
+                    if self._dims_already_match_canvas_wrap(
+                        dims=dims,
+                        selected_wrap=selected_wrap,
+                    ):
+                        continue
                     sku = dims.get("sku")
                     if not sku:
                         continue
@@ -1544,12 +1577,43 @@ class ArtworkPrintWorkflowService:
                         slot_size_label=dims.get("label"),
                         wrap_margin_pct=0.0,
                     )
-                    dims["print_area_width_px"] = resolved.get("print_area_width_px")
-                    dims["print_area_height_px"] = resolved.get("print_area_height_px")
-                    dims["print_area_name"] = resolved.get("print_area_name")
-                    dims["print_area_source"] = resolved.get("print_area_source")
-                    dims["print_area_dimensions"] = resolved.get("print_area_dimensions")
+                    self._apply_resolved_canvas_dimensions(dims=dims, resolved=resolved)
         return size_catalog
+
+    def _apply_resolved_canvas_dimensions(
+        self,
+        *,
+        dims: dict[str, Any],
+        resolved: dict[str, Any],
+    ) -> None:
+        dims["print_area_width_px"] = resolved.get("print_area_width_px")
+        dims["print_area_height_px"] = resolved.get("print_area_height_px")
+        dims["print_area_name"] = resolved.get("print_area_name")
+        dims["print_area_source"] = resolved.get("print_area_source")
+        dims["print_area_dimensions"] = resolved.get("print_area_dimensions")
+
+    def _dims_already_match_canvas_wrap(
+        self,
+        *,
+        dims: dict[str, Any],
+        selected_wrap: str,
+    ) -> bool:
+        if not dims.get("print_area_width_px") or not dims.get("print_area_height_px"):
+            return False
+
+        dimensions = self._normalize_print_area_dimensions(dims.get("print_area_dimensions"))
+        attributes = dimensions.get("variant_attributes") or {}
+        if not isinstance(attributes, dict):
+            return False
+
+        baked_wrap = attributes.get("wrap")
+        return self._normalize_canvas_wrap_value(baked_wrap) == self._normalize_canvas_wrap_value(
+            selected_wrap
+        )
+
+    @staticmethod
+    def _normalize_canvas_wrap_value(value: Any) -> str:
+        return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
 
     def _build_provider_attribute_coverage(self, groups: list[Any]) -> dict[str, Any]:
         by_category: dict[str, dict[str, Any]] = {}

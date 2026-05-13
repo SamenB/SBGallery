@@ -214,6 +214,26 @@ export function useGalleryPage() {
     },
     [artworkContainerWidths, columnCount, naturalAspectRatios],
   );
+  const getRowImageStageHeight = useCallback(
+    (works: Artwork[], index: number) => {
+      if (!isMobile || gridMode === "1") {
+        return undefined;
+      }
+
+      const rowStart = Math.floor(index / columnCount) * columnCount;
+      const rowWorks = works.slice(rowStart, rowStart + columnCount);
+      const rowHeights = rowWorks
+        .map((work) => {
+          const width = artworkContainerWidths[work.id];
+          const ratio = getProductAspectRatio(work, naturalAspectRatios[work.id]);
+          return width && ratio ? width / ratio : null;
+        })
+        .filter((height): height is number => height !== null && Number.isFinite(height));
+
+      return rowHeights.length ? Math.ceil(Math.max(...rowHeights)) : undefined;
+    },
+    [artworkContainerWidths, columnCount, gridMode, isMobile, naturalAspectRatios],
+  );
 
   return {
     allArtworks,
@@ -241,6 +261,7 @@ export function useGalleryPage() {
     getRowAspectRatioRange,
     handleNaturalAspectRatio,
     handleContainerWidthChange,
+    getRowImageStageHeight,
     imageZone: IMAGE_ZONE[gridMode] || 380,
   };
 }

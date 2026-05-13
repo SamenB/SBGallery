@@ -418,6 +418,51 @@ async def test_get_workflow_reports_canvas_mirrorwrap_coverage():
 
 
 @pytest.mark.asyncio
+async def test_get_workflow_reuses_baked_canvas_wrap_dimensions(monkeypatch):
+    artwork = make_artwork(paper=False, canvas=True, ratio_label="4:5")
+    service = make_service(
+        groups=[
+            make_group(
+                "canvasStretched",
+                "122x152",
+                ratio_label="4:5",
+                print_area_width_px=14454,
+                print_area_height_px=18054,
+                print_area_source="prodigi_product_details",
+                print_area_dimensions={
+                    "visible_art_width_px": 14400,
+                    "visible_art_height_px": 18000,
+                    "physical_width_in": 48,
+                    "physical_height_in": 60,
+                    "variant_attributes": {"wrap": "MirrorWrap"},
+                },
+            ),
+        ],
+    )
+    service._get_artwork_orm = AsyncMock(return_value=artwork)
+
+    class FailingResolver:
+        async def __aenter__(self):
+            raise AssertionError("resolver should not be opened for already-baked wrap")
+
+        async def __aexit__(self, *args):
+            return None
+
+    monkeypatch.setattr(
+        "src.services.artwork_print_workflow.ProdigiPrintAreaResolver",
+        FailingResolver,
+    )
+
+    payload = await service.get_workflow(artwork.id)
+
+    slot = next(item for item in payload["master_slots"] if item["slot_id"] == "master")
+    assert slot["required_min_px"]["width"] == 14454
+    assert slot["required_min_px"]["height"] == 18054
+    assert slot["export_guidance"]["target_width_px"] == 16800
+    assert slot["export_guidance"]["target_height_px"] == 21000
+
+
+@pytest.mark.asyncio
 async def test_get_workflow_blocks_clean_master_until_canvas_wrap_is_selected():
     artwork = make_artwork(paper=False, canvas=True, ratio_label="4:5", print_profile_overrides={})
     service = make_service(

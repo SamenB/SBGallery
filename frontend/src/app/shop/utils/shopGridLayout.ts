@@ -25,14 +25,14 @@ export function getShopGridColumns(columnCount: number) {
 export function getShopGridGap({ isMobile, isPhone, gridMode }: { isMobile: boolean; isPhone: boolean; gridMode: ShopGridMode }) {
   if (isMobile) {
     if (isPhone) {
-      if (gridMode === "1") return "1.35rem 1rem";
-      if (gridMode === "2") return "0.9rem 1.25rem";
-      return "0.4rem 0.5rem";
+      if (gridMode === "1") return "1.1rem 0.55rem";
+      if (gridMode === "2") return "0.75rem 0.65rem";
+      return "0.45rem 0.35rem";
     }
 
-    if (gridMode === "1") return "1.8rem 1.5rem";
-    if (gridMode === "2") return "1.2rem 1rem";
-    return "0.65rem 0.5rem";
+    if (gridMode === "1") return "1.4rem 0.8rem";
+    if (gridMode === "2") return "0.9rem 0.65rem";
+    return "0.55rem 0.4rem";
   }
 
   if (gridMode === "1") return "2.4rem 24px";

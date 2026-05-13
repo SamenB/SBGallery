@@ -196,34 +196,47 @@ export function ShopPageContent() {
   const columnCount = getShopColumnCount({ isMobile, isPhone, gridMode });
   const gridColumns = getShopGridColumns(columnCount);
   const gridGap = getShopGridGap({ isMobile, isPhone, gridMode });
-  const rowAspectRatioRanges = useMemo(() => {
+  const displayedAspectRatioRange = useMemo(() => {
+    const ratios = displayed
+      .map((product) =>
+        getProductAspectRatio(product, naturalAspectRatios[product.id]),
+      )
+      .filter((ratio): ratio is number => ratio !== null);
+
+    if (ratios.length === 0) {
+      return undefined;
+    }
+
+    const containerWidths = displayed
+      .map((product) => artworkContainerWidths[product.id])
+      .filter((width): width is number => Boolean(width));
+
+    return {
+      min: Math.min(...ratios),
+      max: Math.max(...ratios),
+      containerWidth:
+        containerWidths.length > 0 ? Math.min(...containerWidths) : undefined,
+    };
+  }, [artworkContainerWidths, displayed, naturalAspectRatios]);
+  const rowImageStageHeights = useMemo(() => {
+    if (!isMobile || gridMode === "1") {
+      return undefined;
+    }
+
     return displayed.map((_, index) => {
       const rowStart = Math.floor(index / columnCount) * columnCount;
       const rowProducts = displayed.slice(rowStart, rowStart + columnCount);
-      const ratios = rowProducts
-        .map((product) =>
-          getProductAspectRatio(product, naturalAspectRatios[product.id]),
-        )
-        .filter((ratio): ratio is number => ratio !== null);
+      const rowHeights = rowProducts
+        .map((product) => {
+          const width = artworkContainerWidths[product.id];
+          const ratio = getProductAspectRatio(product, naturalAspectRatios[product.id]);
+          return width && ratio ? width / ratio : null;
+        })
+        .filter((height): height is number => height !== null && Number.isFinite(height));
 
-      if (ratios.length === 0) {
-        return undefined;
-      }
-
-      const rowContainerWidths = rowProducts
-        .map((product) => artworkContainerWidths[product.id])
-        .filter((width): width is number => Boolean(width));
-
-      return {
-        min: Math.min(...ratios),
-        max: Math.max(...ratios),
-        containerWidth:
-          rowContainerWidths.length > 0
-            ? Math.min(...rowContainerWidths)
-            : undefined,
-      };
+      return rowHeights.length ? Math.ceil(Math.max(...rowHeights)) : undefined;
     });
-  }, [artworkContainerWidths, columnCount, displayed, naturalAspectRatios]);
+  }, [artworkContainerWidths, columnCount, displayed, gridMode, isMobile, naturalAspectRatios]);
 
   const filtersPanel = (
     <ShopFiltersPanel
@@ -337,7 +350,7 @@ export function ShopPageContent() {
             flex: 1,
             minWidth: 0,
             padding: isMobile
-              ? "1rem 0.75rem 6rem 0.75rem"
+              ? "0.75rem 0.35rem 6rem"
               : "1rem 2.5rem 6rem 2rem",
           }}
         >
@@ -363,7 +376,8 @@ export function ShopPageContent() {
             isMobile={isMobile}
             countryCode={activeCountryCode}
             likedIds={effectiveLikedIds}
-            rowAspectRatioRanges={rowAspectRatioRanges}
+            imageAspectRatioRange={displayedAspectRatioRange}
+            rowImageStageHeights={rowImageStageHeights}
             visibleCount={visibleCount}
             loadMoreRef={loadMoreRef}
             onClearAll={clearAll}

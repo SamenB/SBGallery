@@ -18,6 +18,7 @@ interface ArtCardProps {
     onLike?: (id: number, newState: boolean) => void;
     onAuthRequired?: (id: number, newState: boolean) => void;
     rowAspectRatioRange?: AspectRatioRange;
+    fixedImageStageHeight?: number;
     onNaturalAspectRatio?: (id: number, ratio: number) => void;
     onContainerWidthChange?: (id: number, width: number) => void;
 }
@@ -26,7 +27,7 @@ interface ArtCardProps {
  * Individual gallery card component.
  * Dynamically calculates padding and positioning to anchor title boxes strictly to image edges.
  */
-export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: ArtCardProps) {
+export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initialLiked, onLike, onAuthRequired, rowAspectRatioRange, fixedImageStageHeight, onNaturalAspectRatio, onContainerWidthChange }: ArtCardProps) {
     const { units } = usePreferences();
     const ori = (work.orientation || "vertical").toLowerCase();
     const isHorizontal = ori === "horizontal";
@@ -43,8 +44,9 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
     const [imgHovered, setImgHovered] = useState(false);
     const [liked, setLiked] = useState(initialLiked || false);
     const [likeAnimating, setLikeAnimating] = useState(false);
+    const shouldUseNaturalMobileSizing = isMobile;
     const equalAreaImageSize = useMemo(
-        () => getEqualAreaImageSize({
+        () => shouldUseNaturalMobileSizing ? null : getEqualAreaImageSize({
             product: work,
             containerWidth,
             zoneHeight: zoneH,
@@ -54,16 +56,24 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
             maxWidthRatio: 0.76,
             maxHeightRatio: 0.9,
         }),
-        [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, work, zoneH],
+        [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, shouldUseNaturalMobileSizing, work, zoneH],
     );
     const artworkRatio = getProductAspectRatio(work, naturalAspectRatio);
     const rowAspectRatioMin = rowAspectRatioRange?.min;
     const stageHeight = useMemo(() => {
-        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) return zoneH;
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) {
+            if (!isMobile) return zoneH;
+            if (gridMode === "1") return Math.min(zoneH, 360);
+            if (gridMode === "2") return Math.min(zoneH, 240);
+            return Math.min(zoneH, 160);
+        }
         const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioMin);
         const stagePadding = isMobile ? (gridMode === "3" ? 4 : 8) : 10;
         return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
     }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioMin, zoneH]);
+    const imageStageHeight = fixedImageStageHeight !== undefined || !shouldUseNaturalMobileSizing
+        ? `${fixedImageStageHeight ?? stageHeight}px`
+        : "auto";
 
     // Sync on parent prop change (e.g., after DB load)
     useEffect(() => { setLiked(initialLiked || false); }, [initialLiked]);
@@ -148,7 +158,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                 style={{
                     position: "relative",
                     width: "100%",
-                    height: `${stageHeight}px`,
+                    height: imageStageHeight,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -169,9 +179,9 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
                         style={{
                             display: "block",
-                            maxWidth: isMobile ? "100%" : "76%",
-                            maxHeight: equalAreaImageSize ? `${zoneH * 0.9}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
-                            width: equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
+                            maxWidth: shouldUseNaturalMobileSizing ? "100%" : isMobile ? "100%" : "76%",
+                            maxHeight: shouldUseNaturalMobileSizing ? "none" : equalAreaImageSize ? `${zoneH * 0.9}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
+                            width: shouldUseNaturalMobileSizing ? "100%" : equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
                             height: "auto",
                             borderRadius: "4px",
                             alignSelf: "center",
@@ -188,8 +198,9 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                     />
                 ) : (
                     <div className="art-card-inner" style={{
-                        width: isHorizontal || isSquare ? "76%" : "55%",
-                        height: isHorizontal ? "55%" : "85%",
+                        width: shouldUseNaturalMobileSizing ? "100%" : isHorizontal || isSquare ? "76%" : "55%",
+                        height: shouldUseNaturalMobileSizing ? "auto" : isHorizontal ? "55%" : "85%",
+                        aspectRatio: shouldUseNaturalMobileSizing ? isHorizontal ? "1.35 / 1" : isSquare ? "1 / 1" : "0.72 / 1" : undefined,
                         backgroundImage: `linear-gradient(160deg, ${work.gradientFrom} 0%, ${work.gradientTo} 100%)`,
                         borderRadius: "4px",
                         alignSelf: "center",

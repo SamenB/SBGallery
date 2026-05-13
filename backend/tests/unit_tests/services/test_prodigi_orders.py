@@ -599,6 +599,53 @@ def test_build_order_payload_uses_selected_public_checkout_shipping_method():
     assert body["shippingMethod"] == "Overnight"
 
 
+def test_fulfillment_geometry_gate_accepts_microcrop_master():
+    service = ProdigiFulfillmentQualityService(None)
+    master_asset = SimpleNamespace(file_metadata={"width_px": 21000, "height_px": 16800})
+
+    result = service._master_render_geometry_check(
+        master_asset=master_asset,
+        category_id="canvasStretched",
+        target_width=18054,
+        target_height=14454,
+    )
+
+    assert result["passed"] is True
+    assert result["measured"]["mode"] == "cover_crop_resize"
+    assert max(result["measured"]["estimated_crop_px"]) > 0
+    assert result["measured"]["max_crop_pct"] <= 0.02
+
+
+def test_fulfillment_geometry_gate_blocks_large_cover_crop():
+    service = ProdigiFulfillmentQualityService(None)
+    master_asset = SimpleNamespace(file_metadata={"width_px": 21000, "height_px": 16800})
+
+    result = service._master_render_geometry_check(
+        master_asset=master_asset,
+        category_id="canvasStretched",
+        target_width=12000,
+        target_height=18000,
+    )
+
+    assert result["passed"] is False
+    assert "more than micro-cropping" in result["error"]
+
+
+def test_fulfillment_geometry_gate_blocks_upscaled_master():
+    service = ProdigiFulfillmentQualityService(None)
+    master_asset = SimpleNamespace(file_metadata={"width_px": 3000, "height_px": 2400})
+
+    result = service._master_render_geometry_check(
+        master_asset=master_asset,
+        category_id="canvasStretched",
+        target_width=18054,
+        target_height=14454,
+    )
+
+    assert result["passed"] is False
+    assert result["measured"]["scale"] > 1
+
+
 @pytest.mark.parametrize(
     "category_id",
     [

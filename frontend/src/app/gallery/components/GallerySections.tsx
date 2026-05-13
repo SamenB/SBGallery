@@ -24,6 +24,7 @@ interface GallerySectionsProps {
     works: Artwork[],
     index: number,
   ) => { min: number; max: number; containerWidth?: number } | undefined;
+  getRowImageStageHeight?: (works: Artwork[], index: number) => number | undefined;
 }
 
 export function GallerySections({
@@ -43,6 +44,7 @@ export function GallerySections({
   onNaturalAspectRatio,
   onContainerWidthChange,
   getRowAspectRatioRange,
+  getRowImageStageHeight,
 }: GallerySectionsProps) {
   return (
     <>
@@ -107,7 +109,7 @@ export function GallerySections({
                 className="magnetic-scroll"
                 style={{
                   width: "100%",
-                  padding: isMobile ? "0 0.75rem 1rem" : "0 0 0.5rem",
+                  padding: isMobile ? "0 0.35rem 1rem" : "0 0 0.5rem",
                 }}
               >
                 <div
@@ -133,6 +135,7 @@ export function GallerySections({
                       isMobile={isMobile}
                       liked={likedIds.has(work.id)}
                       rowAspectRatioRange={getRowAspectRatioRange(works, index)}
+                      fixedImageStageHeight={getRowImageStageHeight?.(works, index)}
                       onNaturalAspectRatio={onNaturalAspectRatio}
                       onContainerWidthChange={onContainerWidthChange}
                       onLike={onLike}

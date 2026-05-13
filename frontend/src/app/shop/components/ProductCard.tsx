@@ -9,7 +9,7 @@ import { STATUS } from "../constants";
 import { buildArtworkHref, getEqualAreaImageSize, getProductAspectRatio, getStorefrontSummary } from "../utils";
 import type { AspectRatioRange } from "../utils";
 
-export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, onNaturalAspectRatio, onContainerWidthChange }: {
+export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, fixedImageStageHeight, useNaturalMobileSizing, onNaturalAspectRatio, onContainerWidthChange }: {
     product: Product; zoneH: number; gridMode: string; isMobile: boolean;
     countryCode?: string;
     initialLiked?: boolean;
@@ -18,6 +18,8 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     listIndex?: number;
     onLikeChange?: (id: number, liked: boolean) => void;
     rowAspectRatioRange?: AspectRatioRange;
+    fixedImageStageHeight?: number;
+    useNaturalMobileSizing?: boolean;
     onNaturalAspectRatio?: (id: number, ratio: number) => void;
     onContainerWidthChange?: (id: number, width: number) => void;
 }) {
@@ -50,39 +52,80 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     const [imgHovered, setImgHovered] = useState(false);
     const [localLiked, setLocalLiked] = useState(initialLiked || false);
     const [likeAnimating, setLikeAnimating] = useState(false);
+    const lastNaturalAspectRatioRef = useRef<number | undefined>(undefined);
+    const lastContainerWidthRef = useRef(0);
 
+    const shouldUseNaturalMobileSizing = isMobile && useNaturalMobileSizing;
     const liked = likedIds !== undefined ? likedIds.has(product.id) : localLiked;
     const equalAreaImageSize = useMemo(
-        () => getEqualAreaImageSize({ product, containerWidth, zoneHeight: zoneH, isMobile, rowAspectRatioRange, naturalAspectRatio }),
-        [containerWidth, isMobile, naturalAspectRatio, product, rowAspectRatioRange, zoneH],
+        () => shouldUseNaturalMobileSizing ? null : getEqualAreaImageSize({
+            product,
+            containerWidth,
+            zoneHeight: zoneH,
+            isMobile,
+            rowAspectRatioRange,
+            naturalAspectRatio,
+            maxWidthRatio: 1,
+        }),
+        [containerWidth, isMobile, naturalAspectRatio, product, rowAspectRatioRange, shouldUseNaturalMobileSizing, zoneH],
     );
     const artworkRatio = getProductAspectRatio(product, naturalAspectRatio);
     const rowAspectRatioMin = rowAspectRatioRange?.min;
-    const stageHeight = useMemo(() => {
-        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) return zoneH;
+    const measuredStageHeight = useMemo(() => {
+        if (!equalAreaImageSize || !artworkRatio || !rowAspectRatioMin) {
+            if (!isMobile) return zoneH;
+            if (gridMode === "1") return Math.min(zoneH, 380);
+            if (gridMode === "2") return Math.min(zoneH, 300);
+            return Math.min(zoneH, 190);
+        }
         const rowMaxImageHeight = equalAreaImageSize.height * Math.sqrt(artworkRatio / rowAspectRatioMin);
         const stagePadding = isMobile ? (gridMode === "3" ? 6 : 10) : 14;
         return Math.min(zoneH, Math.ceil(rowMaxImageHeight + stagePadding * 2));
     }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioMin, zoneH]);
+    const stageHeight = fixedImageStageHeight ?? measuredStageHeight;
+    const imageStageHeight = fixedImageStageHeight !== undefined || !shouldUseNaturalMobileSizing ? `${stageHeight}px` : "auto";
+
+    const reportNaturalAspectRatio = useCallback((ratio: number) => {
+        if (!Number.isFinite(ratio)) return;
+        if (lastNaturalAspectRatioRef.current !== undefined && Math.abs(lastNaturalAspectRatioRef.current - ratio) < 0.0001) return;
+        lastNaturalAspectRatioRef.current = ratio;
+        setNaturalAspectRatio(ratio);
+        onNaturalAspectRatio?.(product.id, ratio);
+    }, [onNaturalAspectRatio, product.id]);
+
+    const reportContainerWidth = useCallback((width: number) => {
+        if (lastContainerWidthRef.current === width) return;
+        lastContainerWidthRef.current = width;
+        setContainerWidth(width);
+        onContainerWidthChange?.(product.id, width);
+    }, [onContainerWidthChange, product.id]);
 
     const recalc = useCallback(() => {
         const c = containerRef.current;
         if (!c) return;
         const inner = c.querySelector(".art-card-inner") as HTMLElement;
         if (!inner) return;
+        const nextContainerWidth = c.clientWidth;
         if (inner.tagName === "IMG") {
             const img = inner as HTMLImageElement;
             if (!img.complete || !img.naturalWidth) return;
             const ratio = img.naturalWidth / img.naturalHeight;
-            setNaturalAspectRatio(ratio);
-            onNaturalAspectRatio?.(product.id, ratio);
+            reportNaturalAspectRatio(ratio);
         }
-        setContainerWidth(c.clientWidth);
-        onContainerWidthChange?.(product.id, c.clientWidth);
-        setTextPad(Math.max(0, (c.clientWidth - inner.offsetWidth) / 2));
-        setEmptyBottom(Math.max(0, (c.clientHeight - inner.offsetHeight) / 2));
-        setMeasuredImgH(inner.offsetHeight);
-    }, [onContainerWidthChange, onNaturalAspectRatio, product.id]);
+        reportContainerWidth(nextContainerWidth);
+        setTextPad((prev) => {
+            const next = Math.max(0, (nextContainerWidth - inner.offsetWidth) / 2);
+            return prev === next ? prev : next;
+        });
+        setEmptyBottom((prev) => {
+            const next = Math.max(0, (c.clientHeight - inner.offsetHeight) / 2);
+            return prev === next ? prev : next;
+        });
+        setMeasuredImgH((prev) => {
+            const next = inner.offsetHeight;
+            return prev === next ? prev : next;
+        });
+    }, [reportContainerWidth, reportNaturalAspectRatio]);
 
     useEffect(() => {
         recalc();
@@ -91,18 +134,18 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     }, [recalc]);
 
     useEffect(() => {
-        requestAnimationFrame(recalc);
+        const frameId = requestAnimationFrame(recalc);
+        return () => cancelAnimationFrame(frameId);
     }, [stageHeight, zoneH, equalAreaImageSize, recalc]);
 
     const handleImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
         const image = event.currentTarget;
         if (image.naturalWidth > 0 && image.naturalHeight > 0) {
             const ratio = image.naturalWidth / image.naturalHeight;
-            setNaturalAspectRatio(ratio);
-            onNaturalAspectRatio?.(product.id, ratio);
+            reportNaturalAspectRatio(ratio);
         }
         recalc();
-    }, [onNaturalAspectRatio, product.id, recalc]);
+    }, [recalc, reportNaturalAspectRatio]);
 
     const sizeStr = useMemo(() => {
         const w = units === "in" ? product.width_in : product.width_cm;
@@ -159,7 +202,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                     ref={containerRef}
                     className="art-card-container"
                     style={{
-                        width: "100%", height: `${stageHeight}px`, display: "flex", alignItems: "center", justifyContent: "center",
+                        width: "100%", height: imageStageHeight, display: "flex", alignItems: "center", justifyContent: "center",
                         flexShrink: 0, position: "relative", pointerEvents: "none",
                     }}
                 >
@@ -175,9 +218,9 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                             onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
                             style={{
                                 display: "block",
-                                maxWidth: isMobile ? "100%" : "78%",
-                                maxHeight: equalAreaImageSize ? `${zoneH * 0.92}px` : isHorizontal ? `${zoneH * 0.78}px` : `${zoneH * 0.92}px`,
-                                width: equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
+                                maxWidth: shouldUseNaturalMobileSizing || equalAreaImageSize ? "100%" : isMobile ? "100%" : "78%",
+                                maxHeight: shouldUseNaturalMobileSizing ? "none" : equalAreaImageSize ? `${zoneH * 0.92}px` : isHorizontal ? `${zoneH * 0.78}px` : `${zoneH * 0.92}px`,
+                                width: shouldUseNaturalMobileSizing ? "100%" : equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
                                 height: "auto",
                                 borderRadius: "4px", alignSelf: "center", flexShrink: 0,
                                 boxShadow: imgHovered && !isMobile ? "4px 16px 40px rgba(28,25,22,0.58), 0 4px 12px rgba(28,25,22,0.35)" : "2px 10px 28px rgba(28,25,22,0.48), 0 3px 8px rgba(28,25,22,0.25)",
@@ -187,7 +230,9 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                         />
                     ) : (
                         <div className="art-card-inner" style={{
-                            width: isHorizontal || isSquare ? "78%" : "55%", height: isHorizontal ? "55%" : "85%",
+                            width: shouldUseNaturalMobileSizing ? "100%" : isHorizontal || isSquare ? "78%" : "55%",
+                            height: shouldUseNaturalMobileSizing ? "auto" : isHorizontal ? "55%" : "85%",
+                            aspectRatio: shouldUseNaturalMobileSizing ? isHorizontal ? "1.35 / 1" : isSquare ? "1 / 1" : "0.72 / 1" : undefined,
                             backgroundImage: `linear-gradient(160deg, ${product.gradientFrom} 0%, ${product.gradientTo} 100%)`,
                             borderRadius: "4px", alignSelf: "center", flexShrink: 0,
                             boxShadow: "2px 8px 22px rgba(28,25,22,0.36), 0 2px 6px rgba(28,25,22,0.20)",

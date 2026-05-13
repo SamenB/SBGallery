@@ -132,9 +132,9 @@ export const getGalleryGridGap = (
   isMobile: boolean,
 ): string => {
   if (isMobile) {
-    if (gridMode === "1") return "1rem 1rem";
-    if (gridMode === "2") return "0.5rem 1.25rem";
-    return "0.25rem 0.5rem";
+    if (gridMode === "1") return "0.9rem 0.55rem";
+    if (gridMode === "2") return "0.55rem 0.65rem";
+    return "0.35rem 0.35rem";
   }
   if (gridMode === "1") return "1.25rem 24px";
   if (gridMode === "2") return "0.9rem 16px";

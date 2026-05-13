@@ -17,24 +17,22 @@ export function RecentPaintingsSection({
   featuredWorks: HomeArtwork[];
 }) {
   return (
-    <section className="premium-texture-bg mx-auto max-w-full bg-[var(--color-cream)] px-8 py-[clamp(3rem,10vh,6rem)]">
+    <section className="premium-texture-bg mx-auto max-w-full bg-[var(--color-cream)] px-5 py-[clamp(2.15rem,7vh,4.5rem)] md:px-8">
       <div className="mx-auto max-w-[1280px]">
-        <div className="mb-1">
-          <p className="mb-2 font-sans text-[0.65rem] font-medium uppercase tracking-[0.15em] text-[var(--color-charcoal-mid)]">
-            Selected Works
-          </p>
-          <h2 className="font-serif text-[clamp(2rem,4vw,3rem)] font-normal italic text-[var(--color-charcoal)]">
+        <div className="mb-3 md:mb-4">
+          <h2 className="font-serif text-[clamp(1.75rem,3.6vw,2.65rem)] font-normal leading-tight tracking-[0.01em] text-[var(--color-charcoal-mid)]">
             Recent Artworks
           </h2>
         </div>
-        <style>{`@media(max-width:768px){.recent-paintings-scroll{display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;margin-left:-1.25rem!important;margin-right:-1.25rem!important;padding:0.25rem 0!important;gap:1rem!important;scrollbar-width:none!important;align-items:center!important;scroll-padding:0 1.25rem!important}.recent-paintings-scroll::-webkit-scrollbar{display:none!important}.recent-paintings-item{flex:0 0 75%!important;scroll-snap-align:start!important}.recent-paintings-spacer{display:block!important;flex:0 0 1.25rem!important;width:1.25rem!important}}`}</style>
+        <style>{`@media(max-width:768px){.recent-paintings-scroll{display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;margin-left:-1rem!important;margin-right:-1rem!important;margin-top:-1.25rem!important;margin-bottom:-1.25rem!important;padding:1.5rem 0!important;gap:0.7rem!important;scrollbar-width:none!important;align-items:flex-start!important;scroll-padding:0 1rem!important}.recent-paintings-scroll::-webkit-scrollbar{display:none!important}.recent-paintings-item{flex:0 0 78%!important;scroll-snap-align:start!important}.recent-paintings-spacer{display:block!important;flex:0 0 1rem!important;width:1rem!important}}`}</style>
         <RecentPaintingsGrid works={featuredWorks} />
         <div className="mt-3 text-center md:mt-10 md:text-right">
           <Link
             href="/shop"
-            className="text-shine border-shine border-b pb-0.5 font-sans text-sm font-medium uppercase tracking-[0.1em] text-[var(--color-charcoal)] no-underline transition-colors hover:text-[var(--color-charcoal-mid)]"
+            className="inline-flex items-center gap-2 border-b border-[rgba(17,17,17,0.42)] pb-0.5 font-sans text-[0.82rem] font-medium uppercase tracking-[0.12em] text-[var(--color-charcoal)] no-underline transition-colors hover:text-[var(--color-charcoal-mid)]"
           >
-            View All Artworks -&gt;
+            <span>View All Artworks</span>
+            <span aria-hidden="true">-&gt;</span>
           </Link>
         </div>
       </div>
@@ -49,12 +47,12 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
     "I paint not what I see, but what I feel when I look.";
 
   return (
-    <section className="bg-[var(--color-cream)] px-8 py-16 md:py-32">
-      <div className="mx-auto flex max-w-[1280px] flex-col gap-10 md:grid md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] md:items-center md:gap-20">
+    <section className="bg-[var(--color-cream)] px-5 py-14 md:px-8 md:py-28">
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-8 md:grid md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))] md:items-center md:gap-16">
         
         {/* Mobile Heading */}
         <div className="order-1 md:hidden">
-          <p className="font-sans text-[clamp(0.85rem,1.2vw,1rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)]">
+          <p className="font-sans text-[0.86rem] font-normal uppercase tracking-[0.14em] text-[var(--color-charcoal-mid)]">
             {artistHeading}
           </p>
         </div>
@@ -74,20 +72,21 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
 
         {/* Text Content */}
         <div className="order-3 flex flex-col md:order-2">
-          <p className="mb-4 hidden font-sans text-[clamp(0.85rem,1.2vw,1rem)] font-normal uppercase tracking-[0.16em] text-[var(--color-charcoal-mid)] md:block">
+          <p className="mb-4 hidden font-sans text-[0.9rem] font-normal uppercase tracking-[0.14em] text-[var(--color-charcoal-mid)] md:block">
             {artistHeading}
           </p>
-          <blockquote className="mb-12 max-w-[540px]">
-            <p className="font-serif text-[clamp(1.4rem,5.6vw,1.8rem)] font-normal italic leading-relaxed text-[var(--color-charcoal)] md:text-[clamp(1.8rem,3vw,2.6rem)]">
+          <blockquote className="mb-8 max-w-[540px] md:mb-10">
+            <p className="font-serif text-[clamp(1.35rem,5.2vw,1.7rem)] font-normal italic leading-relaxed text-[var(--color-charcoal)] md:text-[clamp(1.75rem,2.8vw,2.35rem)]">
               &ldquo;{artistQuote}&rdquo;
             </p>
           </blockquote>
           <div className="text-right">
             <Link
               href="/about"
-              className="text-shine border-shine border-b pb-1 font-sans text-xs font-normal uppercase tracking-[0.15em] text-[var(--color-charcoal)] no-underline transition-colors hover:text-[var(--color-charcoal-mid)]"
+              className="inline-flex items-center gap-2 border-b border-[rgba(17,17,17,0.42)] pb-1 font-sans text-xs font-normal uppercase tracking-[0.15em] text-[var(--color-charcoal)] no-underline transition-colors hover:text-[var(--color-charcoal-mid)]"
             >
-              Read My Story
+              <span>Read My Story</span>
+              <span aria-hidden="true">-&gt;</span>
             </Link>
           </div>
         </div>
@@ -95,4 +94,3 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
     </section>
   );
 }
-

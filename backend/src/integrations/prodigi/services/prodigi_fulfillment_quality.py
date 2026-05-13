@@ -20,7 +20,10 @@ from src.integrations.prodigi.fulfillment.contract import (
     file_md5,
 )
 from src.integrations.prodigi.fulfillment.gates import FAILED, PASSED, SKIPPED
-from src.integrations.prodigi.services.prodigi_order_assets import ProdigiOrderAssetService
+from src.integrations.prodigi.services.prodigi_order_assets import (
+    PAPER_CATEGORIES,
+    ProdigiOrderAssetService,
+)
 from src.models.prodigi_fulfillment import (
     ProdigiFulfillmentEventOrm,
     ProdigiFulfillmentGateResultOrm,
@@ -218,6 +221,25 @@ class ProdigiFulfillmentQualityService:
             )
         )
         if not aspect_check["compatible"]:
+            await self.persist_gates(order=order, item=item, gates=gates, job_id=job_id)
+            return None
+
+        geometry_check = self._master_render_geometry_check(
+            master_asset=master_asset,
+            category_id=category_id,
+            target_width=int(verified_target["width_px"]),
+            target_height=int(verified_target["height_px"]),
+        )
+        gates.append(
+            FulfillmentGateResult(
+                gate="master_render_geometry_safe",
+                status=PASSED if geometry_check["passed"] else FAILED,
+                measured=geometry_check["measured"],
+                expected=geometry_check["expected"],
+                error=geometry_check["error"],
+            )
+        )
+        if not geometry_check["passed"]:
             await self.persist_gates(order=order, item=item, gates=gates, job_id=job_id)
             return None
 
@@ -601,6 +623,109 @@ class ProdigiFulfillmentQualityService:
                 "max_ratio_drift": tolerance,
             },
         }
+
+    def _master_render_geometry_check(
+        self,
+        *,
+        master_asset: Any,
+        category_id: str,
+        target_width: int,
+        target_height: int,
+    ) -> dict[str, Any]:
+        source_size = self._master_asset_pixel_size(master_asset)
+        if source_size is None:
+            return {
+                "passed": False,
+                "measured": {"source_px": None},
+                "expected": {"source_px": "known", "target_px": [target_width, target_height]},
+                "error": "Master asset pixel dimensions are unavailable.",
+            }
+
+        source_width, source_height = source_size
+        oriented_width, oriented_height = self.asset_service._orient_target_to_master(
+            source_img=type(
+                "ImageSize",
+                (),
+                {"size": (source_width, source_height)},
+            )(),
+            target_width=target_width,
+            target_height=target_height,
+        )
+        if category_id in PAPER_CATEGORIES:
+            scale = min(oriented_width / source_width, oriented_height / source_height)
+            measured = {
+                "mode": "white_border_contain",
+                "source_px": [source_width, source_height],
+                "oriented_target_px": [oriented_width, oriented_height],
+                "scale": round(scale, 6),
+                "estimated_crop_px": [0, 0],
+            }
+            passed = scale <= 1.0000001
+            return {
+                "passed": passed,
+                "measured": measured,
+                "expected": {
+                    "no_upscale": True,
+                    "intentional_white_border": category_id in PAPER_CATEGORIES,
+                },
+                "error": None
+                if passed
+                else "Master asset is smaller than the paper inner artwork target.",
+            }
+
+        scale = max(oriented_width / source_width, oriented_height / source_height)
+        scaled_width = source_width * scale
+        scaled_height = source_height * scale
+        crop_width = max(0.0, scaled_width - oriented_width)
+        crop_height = max(0.0, scaled_height - oriented_height)
+        max_crop_pct = max(
+            crop_width / oriented_width if oriented_width else 0.0,
+            crop_height / oriented_height if oriented_height else 0.0,
+        )
+        measured = {
+            "mode": "cover_crop_resize",
+            "source_px": [source_width, source_height],
+            "oriented_target_px": [oriented_width, oriented_height],
+            "scale": round(scale, 6),
+            "estimated_crop_px": [round(crop_width, 2), round(crop_height, 2)],
+            "max_crop_pct": round(max_crop_pct, 6),
+        }
+        passed = scale <= 1.0000001 and max_crop_pct <= 0.02
+        return {
+            "passed": passed,
+            "measured": measured,
+            "expected": {"no_upscale": True, "max_crop_pct": 0.02},
+            "error": None
+            if passed
+            else "Master asset would require upscaling or more than micro-cropping.",
+        }
+
+    def _master_asset_pixel_size(self, master_asset: Any) -> tuple[int, int] | None:
+        metadata = getattr(master_asset, "file_metadata", None) or {}
+        if isinstance(metadata, dict):
+            width = self._positive_int(metadata.get("width_px"))
+            height = self._positive_int(metadata.get("height_px"))
+            if width and height:
+                return width, height
+
+        file_url = getattr(master_asset, "file_url", None)
+        if not file_url:
+            return None
+        raw = str(file_url).strip()
+        path = Path(raw)
+        if not path.exists() and raw.startswith("/"):
+            path = Path(raw.lstrip("/"))
+        if not path.exists():
+            return None
+        with Image.open(path) as image:
+            return int(image.width), int(image.height)
+
+    def _positive_int(self, value: Any) -> int | None:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
 
     def _is_external_https(self, url: str | None) -> bool:
         if not url:

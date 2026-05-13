@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProductCard } from "@/app/shop/components/ProductCard";
 import { IMAGE_ZONE } from "@/app/shop/constants";
-import { getProductAspectRatio } from "@/app/shop/utils";
+import { getEqualAreaImageSize, getProductAspectRatio } from "@/app/shop/utils";
 import type { AspectRatioRange } from "@/app/shop/utils";
 import type { Product } from "@/app/shop/types";
 import {
@@ -25,9 +25,15 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
   const autoScrollStopped = useRef(false);
 
   useEffect(() => {
-    const w = window.innerWidth;
-    setIsMobile(w < 1024);
-    setIsPhone(w < 768);
+    const syncViewport = () => {
+      const w = window.innerWidth;
+      setIsMobile(w < 1024);
+      setIsPhone(w < 768);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
   }, []);
 
   // Desktop: gridMode "2" → 3 columns (matches shop default).
@@ -38,30 +44,49 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
   const gridColumns = getShopGridColumns(columnCount);
   const gridGap = getShopGridGap({ isMobile, isPhone, gridMode });
 
-  // Exact same row-based aspect-ratio range computation as ShopPageContent
-  const rowAspectRatioRanges = useMemo(() => {
-    return works.map((_, index) => {
-      const rowStart = Math.floor(index / columnCount) * columnCount;
-      const rowProducts = works.slice(rowStart, rowStart + columnCount);
-      const ratios = rowProducts
-        .map((w) => getProductAspectRatio(w, naturalAspectRatios[w.id]))
-        .filter((ratio): ratio is number => ratio !== null);
+  const artworkAxisAspectRatioRange = useMemo(() => {
+    const ratios = works
+      .map((work) => getProductAspectRatio(work, naturalAspectRatios[work.id]))
+      .filter((ratio): ratio is number => ratio !== null);
 
-      if (ratios.length === 0) return undefined;
+    if (ratios.length === 0) return undefined;
 
-      const rowContainerWidthValues = rowProducts
-        .map((w) => containerWidths[w.id])
-        .filter((width): width is number => Boolean(width));
+    const measuredContainerWidths = works
+      .map((work) => containerWidths[work.id])
+      .filter((width): width is number => Boolean(width));
 
-      return {
-        min: Math.min(...ratios),
-        max: Math.max(...ratios),
-        containerWidth: rowContainerWidthValues.length > 0
-          ? Math.min(...rowContainerWidthValues)
+    return {
+      min: Math.min(...ratios),
+      max: Math.max(...ratios),
+      containerWidth:
+        measuredContainerWidths.length > 0
+          ? Math.min(...measuredContainerWidths)
           : undefined,
-      } satisfies AspectRatioRange;
-    });
-  }, [columnCount, containerWidths, naturalAspectRatios, works]);
+    } satisfies AspectRatioRange;
+  }, [containerWidths, naturalAspectRatios, works]);
+
+  const fixedImageStageHeight = useMemo(() => {
+    if (!artworkAxisAspectRatioRange?.containerWidth) return undefined;
+
+    const maxImageHeight = Math.max(
+      ...works.map((work) => {
+        const size = getEqualAreaImageSize({
+          product: work,
+          containerWidth: artworkAxisAspectRatioRange.containerWidth ?? 0,
+          zoneHeight: zoneH,
+          isMobile,
+          rowAspectRatioRange: artworkAxisAspectRatioRange,
+          naturalAspectRatio: naturalAspectRatios[work.id],
+          maxWidthRatio: 1,
+        });
+        return size?.height ?? 0;
+      }),
+    );
+
+    if (maxImageHeight <= 0) return undefined;
+
+    return Math.min(zoneH, Math.ceil(maxImageHeight + (isMobile ? 20 : 28)));
+  }, [artworkAxisAspectRatioRange, isMobile, naturalAspectRatios, works, zoneH]);
 
   // Gentle auto-scroll on mobile — stops permanently on first touch
   useEffect(() => {
@@ -134,7 +159,8 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
               gridMode={gridMode}
               isMobile={isMobile}
               listIndex={index}
-              rowAspectRatioRange={rowAspectRatioRanges[index]}
+              rowAspectRatioRange={artworkAxisAspectRatioRange}
+              fixedImageStageHeight={fixedImageStageHeight}
               onNaturalAspectRatio={handleNaturalAspectRatio}
               onContainerWidthChange={handleContainerWidthChange}
             />
@@ -162,7 +188,8 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
           gridMode={gridMode}
           isMobile={isMobile}
           listIndex={index}
-          rowAspectRatioRange={rowAspectRatioRanges[index]}
+          rowAspectRatioRange={artworkAxisAspectRatioRange}
+          fixedImageStageHeight={fixedImageStageHeight}
           onNaturalAspectRatio={handleNaturalAspectRatio}
           onContainerWidthChange={handleContainerWidthChange}
         />

@@ -17,7 +17,8 @@ type ShopCatalogResultsProps = {
   isMobile: boolean;
   countryCode: string;
   likedIds?: Set<number>;
-  rowAspectRatioRanges: (AspectRatioRange | undefined)[];
+  imageAspectRatioRange?: AspectRatioRange;
+  rowImageStageHeights?: (number | undefined)[];
   visibleCount: number;
   loadMoreRef: (node?: Element | null | undefined) => void;
   onClearAll: () => void;
@@ -38,7 +39,8 @@ export function ShopCatalogResults({
   isMobile,
   countryCode,
   likedIds,
-  rowAspectRatioRanges,
+  imageAspectRatioRange,
+  rowImageStageHeights,
   visibleCount,
   loadMoreRef,
   onClearAll,
@@ -69,7 +71,9 @@ export function ShopCatalogResults({
               countryCode={countryCode}
               likedIds={likedIds}
               listIndex={index}
-              rowAspectRatioRange={rowAspectRatioRanges[index]}
+              rowAspectRatioRange={imageAspectRatioRange}
+              fixedImageStageHeight={rowImageStageHeights?.[index]}
+              useNaturalMobileSizing
               onNaturalAspectRatio={onNaturalAspectRatio}
               onContainerWidthChange={onContainerWidthChange}
               onAuthRequired={onAuthRequired}

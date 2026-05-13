@@ -58,6 +58,7 @@ export function GalleryPageContent() {
         onNaturalAspectRatio={gallery.handleNaturalAspectRatio}
         onContainerWidthChange={gallery.handleContainerWidthChange}
         getRowAspectRatioRange={gallery.getRowAspectRatioRange}
+        getRowImageStageHeight={gallery.getRowImageStageHeight}
       />
       <GalleryAuthPrompt
         isOpen={gallery.showAuthPrompt}

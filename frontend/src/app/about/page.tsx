@@ -68,6 +68,7 @@ export default function AboutPage() {
 
   return (
     <div
+      className="about-page-shell"
       style={{
         backgroundColor: "var(--color-cream)",
         minHeight: "100svh",
@@ -75,23 +76,63 @@ export default function AboutPage() {
         paddingBottom: "100px",
       }}
     >
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 2rem" }}>
+      <style>{`
+        .about-page-shell {
+          padding-top: 120px;
+        }
+
+        .about-page-container {
+          padding: 0 2rem;
+        }
+
+        .about-page-header {
+          margin-bottom: 56px;
+          text-align: left;
+        }
+
+        .about-page-eyebrow {
+          font-size: clamp(1.08rem, 1.35vw, 1.29rem);
+        }
+
+        @media (max-width: 768px) {
+          .about-page-shell {
+            padding-top: 72px !important;
+          }
+
+          .about-page-container {
+            padding: 0 1.25rem !important;
+          }
+
+          .about-page-header {
+            margin-bottom: 34px !important;
+            text-align: center !important;
+          }
+
+          .about-page-eyebrow {
+            font-size: 1.29rem !important;
+          }
+        }
+      `}</style>
+      <div className="about-page-container" style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 2rem" }}>
         <header
+          className="about-page-header"
           style={{
             marginBottom: "56px",
+            textAlign: "left",
             opacity: isVisible ? 1 : 0,
             transform: isVisible ? "translateY(0)" : "translateY(20px)",
             transition: "opacity 1s ease, transform 1s ease",
           }}
         >
           <p
+            className="about-page-eyebrow"
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize: "clamp(0.72rem, 0.9vw, 0.86rem)",
-              letterSpacing: "0.2em",
+              fontSize: "clamp(1.08rem, 1.35vw, 1.29rem)",
+              letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "var(--color-charcoal-mid)",
-              marginBottom: "1rem",
+              margin: "0 0 1rem",
               fontWeight: 400,
             }}
           >
