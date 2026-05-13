@@ -16,6 +16,9 @@ interface RecentPaintingsGridProps {
   works: Product[];
 }
 
+const MOBILE_ARTWORK_VISUAL_GAP_PX = 18;
+const MOBILE_ARTWORK_FALLBACK_GAP = "0.7rem";
+
 export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps) {
   const [naturalAspectRatios, setNaturalAspectRatios] = useState<Record<number, number>>({});
   const [containerWidths, setContainerWidths] = useState<Record<number, number>>({});
@@ -88,6 +91,29 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
     return Math.min(zoneH, Math.ceil(maxImageHeight + (isMobile ? 20 : 28)));
   }, [artworkAxisAspectRatioRange, isMobile, naturalAspectRatios, works, zoneH]);
 
+  const imageWidthsById = useMemo(() => {
+    if (!artworkAxisAspectRatioRange?.containerWidth) return {};
+
+    return works.reduce<Record<number, number>>((acc, work) => {
+      const size = getEqualAreaImageSize({
+        product: work,
+        containerWidth:
+          containerWidths[work.id] ?? artworkAxisAspectRatioRange.containerWidth ?? 0,
+        zoneHeight: zoneH,
+        isMobile,
+        rowAspectRatioRange: artworkAxisAspectRatioRange,
+        naturalAspectRatio: naturalAspectRatios[work.id],
+        maxWidthRatio: 1,
+      });
+
+      if (size?.width) {
+        acc[work.id] = size.width;
+      }
+
+      return acc;
+    }, {});
+  }, [artworkAxisAspectRatioRange, containerWidths, isMobile, naturalAspectRatios, works, zoneH]);
+
   // Gentle auto-scroll on mobile — stops permanently on first touch
   useEffect(() => {
     if (!isPhone) return;
@@ -146,13 +172,54 @@ export default function RecentPaintingsGrid({ works }: RecentPaintingsGridProps)
     });
   }, []);
 
+  const getMobileItemMarginRight = useCallback(
+    (index: number) => {
+      if (!isPhone || index >= works.length - 1) return undefined;
+
+      const current = works[index];
+      const next = works[index + 1];
+      if (!current || !next) return undefined;
+
+      const currentContainerWidth =
+        containerWidths[current.id] ?? artworkAxisAspectRatioRange?.containerWidth;
+      const nextContainerWidth =
+        containerWidths[next.id] ?? artworkAxisAspectRatioRange?.containerWidth;
+      const currentImageWidth = imageWidthsById[current.id];
+      const nextImageWidth = imageWidthsById[next.id];
+
+      if (
+        !currentContainerWidth ||
+        !nextContainerWidth ||
+        !currentImageWidth ||
+        !nextImageWidth
+      ) {
+        return MOBILE_ARTWORK_FALLBACK_GAP;
+      }
+
+      const currentBlankRight = Math.max(0, (currentContainerWidth - currentImageWidth) / 2);
+      const nextBlankLeft = Math.max(0, (nextContainerWidth - nextImageWidth) / 2);
+      const marginRight =
+        MOBILE_ARTWORK_VISUAL_GAP_PX - currentBlankRight - nextBlankLeft;
+
+      return `${Math.round(marginRight)}px`;
+    },
+    [artworkAxisAspectRatioRange, containerWidths, imageWidthsById, isPhone, works],
+  );
+
   // On mobile phones: horizontal scroll with peek. Otherwise: shop-identical grid.
   if (isPhone) {
     return (
       <div ref={scrollRef} className="recent-paintings-scroll">
         <div className="recent-paintings-spacer" aria-hidden="true" />
         {works.map((work, index) => (
-          <div key={work.id} className="recent-paintings-item">
+          <div
+            key={work.id}
+            className="recent-paintings-item"
+            data-snap-align={index === 1 ? "center" : "start"}
+            style={{
+              marginRight: getMobileItemMarginRight(index),
+            }}
+          >
             <ProductCard
               product={work}
               zoneH={zoneH}

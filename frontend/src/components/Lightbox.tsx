@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getImageUrl } from "@/utils";
 import {
   LightboxArrowButton,
@@ -27,21 +28,66 @@ export default function Lightbox({
     onClose,
   });
   const currentImage = lightbox.images[lightbox.imageIdx];
+  const headerRef = useRef<HTMLDivElement>(null);
+  const artworkVisualRef = useRef<HTMLElement | null>(null);
+  const [titleOverlapsArtwork, setTitleOverlapsArtwork] = useState(false);
+
+  const measureTitleOverlap = useCallback(() => {
+    const header = headerRef.current;
+    const artwork = artworkVisualRef.current;
+    if (!header || !artwork || window.innerWidth < 768) {
+      setTitleOverlapsArtwork(false);
+      return;
+    }
+
+    const headerRect = header.getBoundingClientRect();
+    const artworkRect = artwork.getBoundingClientRect();
+    const margin = 14;
+    const overlaps =
+      headerRect.left < artworkRect.right + margin &&
+      headerRect.right > artworkRect.left - margin &&
+      headerRect.top < artworkRect.bottom + margin &&
+      headerRect.bottom > artworkRect.top - margin;
+
+    setTitleOverlapsArtwork(overlaps);
+  }, []);
+
+  const setArtworkVisualRef = useCallback(
+    (node: HTMLElement | null) => {
+      artworkVisualRef.current = node;
+      measureTitleOverlap();
+    },
+    [measureTitleOverlap],
+  );
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(measureTitleOverlap);
+    window.addEventListener("resize", measureTitleOverlap);
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", measureTitleOverlap);
+    };
+  }, [currentImage, lightbox.imageIdx, lightbox.work.title, measureTitleOverlap]);
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center overflow-hidden bg-[#4D4E5C]"
+      className="fixed inset-0 z-[2000] flex items-center justify-center overflow-hidden backdrop-blur-[2px]"
       onTouchStart={lightbox.handleOuterTouchStart}
       onTouchEnd={lightbox.handleOuterTouchEnd}
+      style={{ backgroundColor: "rgba(7, 10, 22, 0.9)" }}
     >
       <div
+        ref={headerRef}
         className="lb-header"
         style={{
-          opacity: lightbox.zoom > 1 ? 0 : 1,
+          opacity: lightbox.zoom > 1 || titleOverlapsArtwork ? 0 : 1,
           transition: "opacity 0.2s ease",
         }}
       >
-        <h2 className="lb-title m-0 font-[var(--font-artwork-title)] font-normal not-italic text-white/95">
+        <h2
+          className="lb-title m-0 font-normal not-italic text-white/95"
+          style={{ fontFamily: "var(--font-artwork-title)" }}
+        >
           {lightbox.work.title}
         </h2>
       </div>
@@ -68,13 +114,16 @@ export default function Lightbox({
       >
         {currentImage ? (
           <img
+            ref={setArtworkVisualRef}
             className="block max-h-[94vh] max-w-[94vw] bg-white object-contain shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
             src={getImageUrl(currentImage, "original")}
             alt={lightbox.work.title}
             draggable={false}
+            onLoad={measureTitleOverlap}
           />
         ) : (
           <div
+            ref={setArtworkVisualRef}
             className="h-[94vh] max-h-[800px] w-[94vw] max-w-[800px] shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
             style={{
               background: `linear-gradient(160deg, ${lightbox.work.gradientFrom} 0%, ${lightbox.work.gradientTo} 100%)`,

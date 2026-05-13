@@ -4,7 +4,7 @@ import Image from "next/image";
 import { FormEvent, useState, useId, useEffect } from "react";
 import { Globe, CreditCard, MapPin } from "lucide-react";
 import { getApiUrl, apiFetch, apiJson } from "@/utils";
-import { EMPTY_SITE_COPY, settingText, type SiteSettings } from "@/lib/siteSettings";
+import { settingText, type SiteSettings } from "@/lib/siteSettings";
 const InstagramLogo = ({ size = 24, color = "currentColor" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
     {" "}
@@ -30,6 +30,14 @@ const MailSolidLogo = ({ size = 24, color = "currentColor" }) => (
     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />{" "}
   </svg>
 );
+
+const FOOTER_DISCOVER_FALLBACK =
+  "Browse original paintings, selected studies, and print editions shaped by the studio's current rhythm.";
+const FOOTER_SERVICES_FALLBACK =
+  "For availability, framing, delivery, and collector questions, the studio can help you choose the right work and route.";
+const FOOTER_CIRCLE_FALLBACK =
+  "Receive occasional studio notes, new artwork releases, and first access to selected collector updates.";
+
 export default function FooterClient({
   initialSettings,
 }: {
@@ -169,7 +177,7 @@ export default function FooterClient({
               <h3 className="footer-col-title">Discover the Collection</h3>{" "}
               <p className="footer-col-desc">
                 {" "}
-                {settingText(settings?.footer_text_discover)}
+                {settingText(settings?.footer_text_discover, FOOTER_DISCOVER_FALLBACK)}
               </p>{" "}
               <Link href="/gallery" className="footer-col-link">
                 Explore Gallery
@@ -183,7 +191,7 @@ export default function FooterClient({
               <h3 className="footer-col-title">Collector Services</h3>{" "}
               <p className="footer-col-desc">
                 {" "}
-                {settingText(settings?.footer_text_services)}{" "}
+                {settingText(settings?.footer_text_services, FOOTER_SERVICES_FALLBACK)}{" "}
               </p>{" "}
             </div>{" "}
             <div className="features-wrapper">
@@ -285,7 +293,7 @@ export default function FooterClient({
             <h3 className="footer-col-title">Join our Circle</h3>{" "}
             <p className="footer-col-desc">
               {" "}
-              {settings?.footer_text_circle || EMPTY_SITE_COPY}{" "}
+              {settingText(settings?.footer_text_circle, FOOTER_CIRCLE_FALLBACK)}{" "}
             </p>{" "}
             {subscribed ? (
               <p style={{ color: "#FFFFFF", fontStyle: "italic", marginTop: "1rem" }}>
