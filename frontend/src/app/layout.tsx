@@ -1,8 +1,7 @@
 /**
  * Root Layout for the ArtShop frontend.
- * This server component serves as the global application shell, 
- * providing the HTML structure, global navigation (Navbar/Footer), 
- * and context providers (ClientProviders) for all pages.
+ * This server component serves as the global application shell,
+ * providing the HTML structure, global navigation, and context providers.
  */
 
 import type { Metadata, Viewport } from "next";
@@ -12,27 +11,51 @@ import Footer from "@/components/Footer";
 import ClientProviders from "@/components/ClientProviders";
 import CartDrawer from "@/components/CartDrawer";
 import ImagePreloader from "@/components/ImagePreloader";
+import {
+  EMPTY_SITE_COPY,
+  cleanSetting,
+  excerpt,
+  fetchSiteSettings,
+  stripLeadingHeading,
+} from "@/lib/siteSettings";
 
 /**
- * Global SEO metadata configuration.
- * Defines the application title template, default description, 
- * social media previews (Open Graph), and branding icons.
+ * Global SEO metadata uses the same editable settings as the public pages.
+ * This keeps crawlers from receiving obsolete hardcoded artist copy.
  */
-export const metadata: Metadata = {
-  title: {
-    // Page-specific titles are suffixed with the gallery name.
-    template: "%s | Samen Bondarenko Gallery",
-    default: "Samen Bondarenko Gallery — Original Paintings & Fine Art Prints",
-  },
-  description:
-    "Explore and acquire original oil paintings and high-quality fine art prints. Experience a world defined by vibrant colors and raw emotion.",
-  keywords: ["art", "painter", "gallery", "original paintings", "fine art prints", "collection"],
-  openGraph: {
-    type: "website",
-    siteName: "Samen Bondarenko Gallery",
-    locale: "en_US",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await fetchSiteSettings();
+  const aboutBody = stripLeadingHeading(cleanSetting(settings?.about_text), [
+    "About the Artist",
+  ]);
+  const descriptionSource =
+    aboutBody ||
+    cleanSetting(settings?.artist_home_quote) ||
+    EMPTY_SITE_COPY;
+  const description = excerpt(descriptionSource);
+
+  return {
+    title: {
+      template: "%s | Samen Bondarenko Gallery",
+      default: "Samen Bondarenko Gallery - Original Paintings & Fine Art Prints",
+    },
+    description,
+    keywords: [
+      "art",
+      "painter",
+      "gallery",
+      "original paintings",
+      "fine art prints",
+      "collection",
+    ],
+    openGraph: {
+      type: "website",
+      siteName: "Samen Bondarenko Gallery",
+      locale: "en_US",
+      description,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -40,12 +63,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-/**
- * Primary layout component that wraps every page in the application.
- * Handles the high-level flexbox structure to ensure the footer is always bottom-aligned.
- * 
- * @param children - The active page component to be rendered within the main content area.
- */
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -55,7 +72,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <ClientProviders>
-          {/* Main flex container to manage sticky footer behavior. */}
           <div
             style={{
               minHeight: "100vh",
@@ -63,15 +79,8 @@ export default function RootLayout({
               flexDirection: "column",
             }}
           >
-            {/* Global navigation menu visible on all routes. */}
             <Navbar />
-
-            {/* Main content slot for routed components. */}
-            <main style={{ flex: 1 }}>
-              {children}
-            </main>
-
-            {/* Global footer and persistent overlays (Cart, Preloading). */}
+            <main style={{ flex: 1 }}>{children}</main>
             <Footer />
             <CartDrawer />
             <ImagePreloader />

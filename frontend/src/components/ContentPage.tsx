@@ -1,11 +1,12 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { apiFetch, apiJson, getApiUrl } from "@/utils";
+import {
+    fetchSiteSettings,
+    settingText,
+    type SiteCopyField,
+} from "@/lib/siteSettings";
 
 interface ContentPageProps {
     title: string;
-    field: "shipping_page_text" | "faq_page_text" | "terms_page_text" | "privacy_page_text";
+    field: SiteCopyField;
     fallback: string;
 }
 
@@ -39,20 +40,9 @@ function renderBlock(block: string, index: number) {
     return <p key={index}>{trimmed}</p>;
 }
 
-export default function ContentPage({ title, field, fallback }: ContentPageProps) {
-    const [copy, setCopy] = useState(fallback);
-
-    useEffect(() => {
-        apiFetch(`${getApiUrl()}/settings`)
-            .then((res) => apiJson<Record<string, unknown>>(res))
-            .then((data) => {
-                const nextCopy = data?.[field];
-                if (typeof nextCopy === "string" && nextCopy.trim()) {
-                    setCopy(nextCopy);
-                }
-            })
-            .catch(() => {});
-    }, [field]);
+export default async function ContentPage({ title, field, fallback }: ContentPageProps) {
+    const settings = await fetchSiteSettings();
+    const copy = settingText(settings?.[field], fallback);
 
     return (
         <main className="min-h-screen bg-[#F4F4F2] px-6 pt-[150px] pb-24 text-[#31323E]">

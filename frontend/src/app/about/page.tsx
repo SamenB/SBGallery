@@ -1,70 +1,63 @@
-"use client";
+import type { Metadata } from "next";
+import { getImageUrl } from "@/utils";
+import {
+  EMPTY_SITE_COPY,
+  cleanSetting,
+  excerpt,
+  fetchSiteSettings,
+  settingText,
+  stripLeadingHeading,
+} from "@/lib/siteSettings";
 
-import { useEffect, useState } from "react";
-import { apiFetch, apiJson, getApiUrl, getImageUrl } from "@/utils";
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await fetchSiteSettings();
+  const aboutBody = stripLeadingHeading(cleanSetting(settings?.about_text), [
+    "About the Artist",
+  ]);
+  const title = settingText(settings?.about_page_eyebrow, "About the Artist");
+  const descriptionSource =
+    aboutBody ||
+    cleanSetting(settings?.about_philosophy_text) ||
+    EMPTY_SITE_COPY;
+  const description = excerpt(descriptionSource);
 
-interface AboutSettings {
-  about_text?: string | null;
-  about_page_eyebrow?: string | null;
-  about_page_title?: string | null;
-  about_section_title?: string | null;
-  about_secondary_text?: string | null;
-  about_philosophy_title?: string | null;
-  about_philosophy_text?: string | null;
-  about_exhibitions_title?: string | null;
-  about_exhibitions_text?: string | null;
-  artist_about_photo_url?: string | null;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+    },
+  };
 }
 
-const DEFAULT_ABOUT_TEXT =
-  "Based on the belief that art is a bridge between the seen and the felt, my work focuses on the subtle interplay of light and texture. Born from a fascination with the natural world, each painting is an exploration of memory and atmosphere.";
-const DEFAULT_SECONDARY_TEXT =
-  "I work primarily with oils, enjoying the slow pace and depth that the medium allows. My process is intuitive, often starting with a singular emotion or a specific quality of light observed at dawn or dusk.";
-const DEFAULT_PHILOSOPHY_TEXT =
-  "I don't believe in perfection. I believe in the honest mark - the visible brushstroke that tells the story of its creation. My goal is not to replicate reality, but to invite the viewer into a space where they can find their own reflections.";
-
-function settingText(value: string | null | undefined, fallback: string) {
-  return value?.trim() || fallback;
-}
-
-export default function AboutPage() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [settings, setSettings] = useState<AboutSettings | null>(null);
-  const [imgError, setImgError] = useState(false);
-
-  useEffect(() => {
-    setIsVisible(true);
-    apiFetch(`${getApiUrl()}/settings`)
-      .then((res) => apiJson<AboutSettings>(res))
-      .then((data) => {
-        setSettings(data);
-        setImgError(false);
-      })
-      .catch(() => console.warn("Backend unavailable"));
-  }, []);
+export default async function AboutPage() {
+  const settings = await fetchSiteSettings();
+  const aboutBody = stripLeadingHeading(cleanSetting(settings?.about_text), [
+    "About the Artist",
+  ]);
 
   const eyebrow = settingText(settings?.about_page_eyebrow, "About the Artist");
-  const sectionTitle = settingText(settings?.about_section_title, "The Journey");
-  const aboutText = settingText(settings?.about_text, DEFAULT_ABOUT_TEXT);
-  const secondaryText = settingText(
-    settings?.about_secondary_text,
-    DEFAULT_SECONDARY_TEXT,
-  );
+  const pageTitle = cleanSetting(settings?.about_page_title);
+  const sectionTitle = settingText(settings?.about_section_title, "About");
+  const aboutText = aboutBody || EMPTY_SITE_COPY;
+  const secondaryText = cleanSetting(settings?.about_secondary_text);
   const philosophyTitle = settingText(
     settings?.about_philosophy_title,
     "Philosophy",
   );
-  const philosophyText = settingText(
-    settings?.about_philosophy_text,
-    DEFAULT_PHILOSOPHY_TEXT,
+  const philosophyText = settingText(settings?.about_philosophy_text);
+  const exhibitionsTitle = settingText(
+    settings?.about_exhibitions_title,
+    "Selected Exhibitions",
   );
-  const exhibitionsTitle =
-    settings?.about_exhibitions_title?.trim() || "Selected Exhibitions";
   const exhibitions =
     settings?.about_exhibitions_text
       ?.split(/\r?\n/)
       .map((item) => item.trim())
       .filter(Boolean) || [];
+  const artistPhoto = getImageUrl(settings?.artist_about_photo_url);
 
   return (
     <div
@@ -113,17 +106,11 @@ export default function AboutPage() {
           }
         }
       `}</style>
-      <div className="about-page-container" style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 2rem" }}>
-        <header
-          className="about-page-header"
-          style={{
-            marginBottom: "56px",
-            textAlign: "left",
-            opacity: isVisible ? 1 : 0,
-            transform: isVisible ? "translateY(0)" : "translateY(20px)",
-            transition: "opacity 1s ease, transform 1s ease",
-          }}
-        >
+      <div
+        className="about-page-container"
+        style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 2rem" }}
+      >
+        <header className="about-page-header">
           <p
             className="about-page-eyebrow"
             style={{
@@ -138,6 +125,20 @@ export default function AboutPage() {
           >
             {eyebrow}
           </p>
+          {pageTitle ? (
+            <h1
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: "clamp(2.5rem, 6vw, 5rem)",
+                fontWeight: 400,
+                color: "var(--color-charcoal)",
+                lineHeight: 1,
+                margin: 0,
+              }}
+            >
+              {pageTitle}
+            </h1>
+          ) : null}
         </header>
 
         <div
@@ -148,12 +149,7 @@ export default function AboutPage() {
             alignItems: "start",
           }}
         >
-          <div
-            style={{
-              opacity: isVisible ? 1 : 0,
-              transition: "opacity 1.2s ease 0.3s",
-            }}
-          >
+          <div>
             <div
               style={{
                 aspectRatio: "3/4",
@@ -162,37 +158,37 @@ export default function AboutPage() {
                 overflow: "hidden",
                 boxShadow:
                   "2px 10px 28px rgba(28,25,22,0.48), 0 3px 8px rgba(28,25,22,0.25)",
-                background: imgError
-                  ? "linear-gradient(135deg, var(--color-cream-dark), var(--color-border))"
-                  : undefined,
               }}
             >
-              {!imgError && (
+              {artistPhoto ? (
                 <img
-                  src={
-                    settings?.artist_about_photo_url
-                      ? getImageUrl(settings.artist_about_photo_url)
-                      : "/artist_studio_portrait.png"
-                  }
+                  src={artistPhoto}
                   alt="Artist in studio"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onError={() => setImgError(true)}
                 />
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    height: "100%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "2rem",
+                    textAlign: "center",
+                    fontFamily: "var(--font-serif)",
+                    fontStyle: "italic",
+                    color: "var(--color-muted)",
+                  }}
+                >
+                  Artist photo coming soon.
+                </div>
               )}
             </div>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "40px",
-              opacity: isVisible ? 1 : 0,
-              transition: "opacity 1.2s ease 0.6s",
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
             <div>
-              <h3
+              <h2
                 style={{
                   fontFamily: "var(--font-serif)",
                   fontSize: "1.75rem",
@@ -203,87 +199,94 @@ export default function AboutPage() {
                 }}
               >
                 {sectionTitle}
-              </h3>
+              </h2>
               <p
                 style={{
                   fontFamily: "var(--font-sans)",
                   fontSize: "1rem",
                   color: "var(--color-charcoal-mid)",
                   lineHeight: 1.8,
-                  marginBottom: "1.5rem",
+                  marginBottom: secondaryText ? "1.5rem" : 0,
                   fontWeight: 300,
                   whiteSpace: "pre-wrap",
                 }}
               >
                 {aboutText}
               </p>
-              <p
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "1rem",
-                  color: "var(--color-charcoal-mid)",
-                  lineHeight: 1.8,
-                  fontWeight: 300,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {secondaryText}
-              </p>
+              {secondaryText ? (
+                <p
+                  style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "1rem",
+                    color: "var(--color-charcoal-mid)",
+                    lineHeight: 1.8,
+                    fontWeight: 300,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {secondaryText}
+                </p>
+              ) : null}
             </div>
 
             {exhibitions.length > 0 ? (
               <>
-                <div style={{ height: "1px", backgroundColor: "var(--color-border)" }} />
+                <div
+                  style={{
+                    height: "1px",
+                    backgroundColor: "var(--color-border)",
+                  }}
+                />
                 <div style={{ marginTop: "10px" }}>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.6rem",
-                    color: "var(--color-muted)",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {exhibitionsTitle}
-                </span>
-                <ul
-                  style={{
-                    listStyle: "none",
-                    padding: 0,
-                    marginTop: "15px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                  }}
-                >
-                  {exhibitions.map((item) => (
-                    <li
-                      key={item}
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "0.75rem",
-                        color: "var(--color-charcoal-mid)",
-                        opacity: 0.7,
-                      }}
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.6rem",
+                      color: "var(--color-muted)",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {exhibitionsTitle}
+                  </span>
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      marginTop: "15px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                    }}
+                  >
+                    {exhibitions.map((item) => (
+                      <li
+                        key={item}
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "0.75rem",
+                          color: "var(--color-charcoal-mid)",
+                          opacity: 0.7,
+                        }}
+                      >
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </>
             ) : null}
           </div>
         </div>
-        <div
-          style={{
-            marginTop: "80px",
-            opacity: isVisible ? 1 : 0,
-            transition: "opacity 1.2s ease 0.8s",
-          }}
-        >
-          <div style={{ height: "1px", backgroundColor: "var(--color-border)", marginBottom: "40px" }} />
-          <h3
+        <div style={{ marginTop: "80px" }}>
+          <div
+            style={{
+              height: "1px",
+              backgroundColor: "var(--color-border)",
+              marginBottom: "40px",
+            }}
+          />
+          <h2
             style={{
               fontFamily: "var(--font-serif)",
               fontSize: "1.75rem",
@@ -294,7 +297,7 @@ export default function AboutPage() {
             }}
           >
             {philosophyTitle}
-          </h3>
+          </h2>
           <p
             style={{
               fontFamily: "var(--font-sans)",

@@ -88,7 +88,7 @@ export default function SettingsTab() {
             onChange={handleChange}
             rows={3}
             className={`${settingsInputClass} resize-y leading-relaxed`}
-            placeholder="I paint not what I see, but what I feel when I look."
+            placeholder="Short quote shown on the homepage."
           />
         </FieldGroup>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -109,7 +109,7 @@ export default function SettingsTab() {
               value={settings.about_page_title || ""}
               onChange={handleChange}
               className={settingsInputClass}
-              placeholder="A Dialogue with Canvas and Light"
+              placeholder="Optional large title for the About page"
             />
           </FieldGroup>
         </div>
@@ -120,7 +120,7 @@ export default function SettingsTab() {
             value={settings.about_section_title || ""}
             onChange={handleChange}
             className={settingsInputClass}
-            placeholder="The Journey"
+            placeholder="About"
           />
         </FieldGroup>
         <FieldGroup label="About the Artist">
@@ -151,7 +151,7 @@ export default function SettingsTab() {
               value={settings.about_philosophy_title || ""}
               onChange={handleChange}
               className={settingsInputClass}
-              placeholder="Philosophy"
+              placeholder="The Unresolved Image"
             />
           </FieldGroup>
           <FieldGroup label="Exhibitions Title">

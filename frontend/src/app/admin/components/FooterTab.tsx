@@ -114,7 +114,7 @@ export default function FooterTab() {
                         onChange={handleChange}
                         rows={4}
                         className={`${inp} resize-y leading-relaxed`}
-                        placeholder="Welcome to a space where modern vision meets classical mastery…"
+                        placeholder="Footer intro text shown in the first column."
                     />
                 </FieldGroup>
 
@@ -125,7 +125,7 @@ export default function FooterTab() {
                         onChange={handleChange}
                         rows={4}
                         className={`${inp} resize-y leading-relaxed`}
-                        placeholder="We pride ourselves on providing a premium experience…"
+                        placeholder="Collector service copy shown in the footer."
                     />
                 </FieldGroup>
 
@@ -136,7 +136,7 @@ export default function FooterTab() {
                         onChange={handleChange}
                         rows={4}
                         className={`${inp} resize-y leading-relaxed`}
-                        placeholder="Subscribe for early access to new works…"
+                        placeholder="Newsletter or collector-list copy shown in the footer."
                     />
                 </FieldGroup>
             </SectionCard>

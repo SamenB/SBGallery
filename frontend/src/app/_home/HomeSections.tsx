@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getImageUrl } from "@/utils";
 import RecentPaintingsGrid from "@/components/RecentPaintingsGrid";
+import { EMPTY_SITE_COPY, settingText } from "@/lib/siteSettings";
 import type { HomeArtwork, HomeSettings } from "./home.types";
 
 export function HomeSectionDivider() {
@@ -41,10 +42,8 @@ export function RecentPaintingsSection({
 }
 
 export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
-  const artistHeading = settings.artist_home_heading?.trim() || "The Artist";
-  const artistQuote =
-    settings.artist_home_quote?.trim() ||
-    "I paint not what I see, but what I feel when I look.";
+  const artistHeading = settingText(settings.artist_home_heading, "About the Artist");
+  const artistQuote = settingText(settings.artist_home_quote);
 
   return (
     <section className="bg-[var(--color-cream)] px-5 py-14 md:px-8 md:py-28">
@@ -66,7 +65,7 @@ export function ArtistIntroSection({ settings }: { settings: HomeSettings }) {
               className="h-full w-full object-cover"
             />
           ) : (
-            "Artist Photo"
+            EMPTY_SITE_COPY
           )}
         </div>
 
