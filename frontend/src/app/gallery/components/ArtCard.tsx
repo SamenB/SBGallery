@@ -53,8 +53,7 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
             isMobile,
             rowAspectRatioRange,
             naturalAspectRatio,
-            maxWidthRatio: 0.76,
-            maxHeightRatio: 0.9,
+            maxWidthRatio: 1,
         }),
         [containerWidth, isMobile, naturalAspectRatio, rowAspectRatioRange, shouldUseNaturalMobileSizing, work, zoneH],
     );
@@ -179,8 +178,8 @@ export function ArtCard({ work, onClick, zoneH, gridMode, isMobile, liked: initi
                         onMouseLeave={() => { if (!isMobile) setImgHovered(false); }}
                         style={{
                             display: "block",
-                            maxWidth: shouldUseNaturalMobileSizing ? "100%" : isMobile ? "100%" : "76%",
-                            maxHeight: shouldUseNaturalMobileSizing ? "none" : equalAreaImageSize ? `${zoneH * 0.9}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
+                            maxWidth: shouldUseNaturalMobileSizing || equalAreaImageSize ? "100%" : isMobile ? "100%" : "76%",
+                            maxHeight: shouldUseNaturalMobileSizing ? "none" : equalAreaImageSize ? `${zoneH * 0.92}px` : isHorizontal || isSquare ? `${zoneH * 0.76}px` : `${zoneH * 0.90}px`,
                             width: shouldUseNaturalMobileSizing ? "100%" : equalAreaImageSize ? `${equalAreaImageSize.width}px` : "auto",
                             height: "auto",
                             borderRadius: "4px",

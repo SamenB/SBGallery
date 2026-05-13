@@ -29,6 +29,8 @@ interface ArtworkListResponse {
 const isGalleryGridMode = (value: string | null): value is GalleryGridMode =>
   value === "1" || value === "2" || value === "3";
 
+const DEFAULT_GALLERY_GRID_MODE: GalleryGridMode = "3";
+
 const readArtworks = (payload: ArtworkListResponse | Artwork[]): Artwork[] => {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.items)) return payload.items;
@@ -53,7 +55,7 @@ export function useGalleryPage() {
     works: Artwork[];
     index: number;
   } | null>(null);
-  const [gridMode, setGridMode] = useState<GalleryGridMode>("2");
+  const [gridMode, setGridMode] = useState<GalleryGridMode>(DEFAULT_GALLERY_GRID_MODE);
   const [isMobile, setIsMobile] = useState(false);
   const [isPhone, setIsPhone] = useState(false);
   const [naturalAspectRatios, setNaturalAspectRatios] = useState<
@@ -91,7 +93,7 @@ export function useGalleryPage() {
         ? "artshop_gallery_gridMode_mobile"
         : "artshop_gallery_gridMode_pc";
     const saved = sessionStorage.getItem(storageKey);
-    setGridMode(isGalleryGridMode(saved) ? saved : window.innerWidth < 768 ? "3" : "2");
+    setGridMode(isGalleryGridMode(saved) ? saved : DEFAULT_GALLERY_GRID_MODE);
   }, [isMobile]);
 
   useEffect(() => {
@@ -192,8 +194,35 @@ export function useGalleryPage() {
     [allArtworks, groupBy, sortKey, visibleCount],
   );
   const effectiveLikedIds = user ? likedIds : new Set(pendingLikes);
+  const visibleArtworks = useMemo(
+    () => visibleGroups.flatMap((group) => group.works),
+    [visibleGroups],
+  );
+  const visibleAspectRatioRange = useMemo(() => {
+    const ratios = visibleArtworks
+      .map((work) =>
+        getProductAspectRatio(work, naturalAspectRatios[work.id]),
+      )
+      .filter((ratio): ratio is number => ratio !== null);
+
+    if (!ratios.length) return undefined;
+
+    const widths = visibleArtworks
+      .map((work) => artworkContainerWidths[work.id])
+      .filter((width): width is number => Boolean(width));
+
+    return {
+      min: Math.min(...ratios),
+      max: Math.max(...ratios),
+      containerWidth: widths.length ? Math.min(...widths) : undefined,
+    };
+  }, [artworkContainerWidths, naturalAspectRatios, visibleArtworks]);
   const getRowAspectRatioRange = useCallback(
     (works: Artwork[], index: number) => {
+      if (!isMobile) {
+        return visibleAspectRatioRange;
+      }
+
       const rowStart = Math.floor(index / columnCount) * columnCount;
       const rowWorks = works.slice(rowStart, rowStart + columnCount);
       const ratios = rowWorks
@@ -212,7 +241,7 @@ export function useGalleryPage() {
         containerWidth: widths.length ? Math.min(...widths) : undefined,
       };
     },
-    [artworkContainerWidths, columnCount, naturalAspectRatios],
+    [artworkContainerWidths, columnCount, isMobile, naturalAspectRatios, visibleAspectRatioRange],
   );
   const getRowImageStageHeight = useCallback(
     (works: Artwork[], index: number) => {
