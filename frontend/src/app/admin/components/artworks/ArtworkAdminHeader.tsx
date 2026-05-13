@@ -1,14 +1,20 @@
+import { Grip } from "lucide-react";
+
 export function ArtworkAdminHeader({
   artworkCount,
   isFormOpen,
+  isOrderingShop,
   payloadRefreshLoading,
   onRefreshPayloads,
+  onToggleShopOrder,
   onToggleEditor,
 }: {
   artworkCount: number;
   isFormOpen: boolean;
+  isOrderingShop: boolean;
   payloadRefreshLoading: boolean;
   onRefreshPayloads: () => void;
+  onToggleShopOrder: () => void;
   onToggleEditor: () => void;
 }) {
   return (
@@ -22,20 +28,32 @@ export function ArtworkAdminHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        {!isOrderingShop ? (
+          <>
+            <button
+              type="button"
+              onClick={onRefreshPayloads}
+              disabled={payloadRefreshLoading}
+              className="px-5 py-2.5 rounded-xl border border-[#31323E]/15 bg-white text-[#31323E] text-sm font-bold uppercase tracking-[0.14em] disabled:opacity-50"
+            >
+              {payloadRefreshLoading ? "Refreshing..." : "Refresh Payloads"}
+            </button>
+            <button
+              type="button"
+              onClick={onToggleEditor}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-[0.14em] transition-colors ${isFormOpen ? "bg-[#31323E]/10 text-[#31323E] border border-[#31323E]/15" : "bg-[#31323E] text-white hover:bg-[#434455]"}`}
+            >
+              {isFormOpen ? "Close Editor" : "New Artwork"}
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
-          onClick={onRefreshPayloads}
-          disabled={payloadRefreshLoading}
-          className="px-5 py-2.5 rounded-xl border border-[#31323E]/15 bg-white text-[#31323E] text-sm font-bold uppercase tracking-[0.14em] disabled:opacity-50"
+          onClick={onToggleShopOrder}
+          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-[0.14em] transition-colors ${isOrderingShop ? "bg-[#31323E]/10 text-[#31323E] border border-[#31323E]/15" : "bg-white text-[#31323E] border border-[#31323E]/15 hover:bg-[#31323E]/5"}`}
         >
-          {payloadRefreshLoading ? "Refreshing..." : "Refresh Payloads"}
-        </button>
-        <button
-          type="button"
-          onClick={onToggleEditor}
-          className={`px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-[0.14em] transition-colors ${isFormOpen ? "bg-[#31323E]/10 text-[#31323E] border border-[#31323E]/15" : "bg-[#31323E] text-white hover:bg-[#434455]"}`}
-        >
-          {isFormOpen ? "Close Editor" : "New Artwork"}
+          <Grip className="h-4 w-4" aria-hidden="true" />
+          {isOrderingShop ? "Close Order" : "Arrange Shop"}
         </button>
       </div>
     </div>

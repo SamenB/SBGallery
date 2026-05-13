@@ -146,6 +146,7 @@ export interface Artwork {
     height_cm?: number | null;
     original_price?: number | null;
     original_status?: string | null;
+    shop_display_order?: number | null;
     images?: ImageEntry[];
     has_original?: boolean;
     has_canvas_print?: boolean;

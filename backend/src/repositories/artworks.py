@@ -3,7 +3,7 @@ Repository for managing artwork data access.
 Extends BaseRepository to provide specialized filtering and eager loading of tags.
 """
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, case, select, update
 from sqlalchemy.orm import joinedload
 
 from src.exeptions import ObjectNotFoundException
@@ -28,6 +28,13 @@ class ArtworksRepository(BaseRepository):
         return select(self.model).options(
             joinedload(self.model.labels),
             joinedload(self.model.print_aspect_ratio),
+        )
+
+    def _shop_ordering(self):
+        return (
+            case((self.model.shop_display_order.is_(None), 1), else_=0).asc(),
+            self.model.shop_display_order.asc(),
+            self.model.id.desc(),
         )
 
     def _apply_common_filters(
@@ -129,6 +136,7 @@ class ArtworksRepository(BaseRepository):
         orientation: str | None = None,
         size_category: str | None = None,
         surface: str = "shop",
+        sort: str = "newest",
     ):
         """
         Retrieves a list of available artworks based on various filters.
@@ -154,7 +162,11 @@ class ArtworksRepository(BaseRepository):
             orientation=orientation,
             size_category=size_category,
         )
-        query = query.order_by(self.model.id.desc()).limit(limit).offset(offset)
+        if sort == "shop_order":
+            query = query.order_by(*self._shop_ordering())
+        else:
+            query = query.order_by(self.model.id.desc())
+        query = query.limit(limit).offset(offset)
 
         result = await self.session.execute(query)
         return [
@@ -188,12 +200,28 @@ class ArtworksRepository(BaseRepository):
             orientation=orientation,
             size_category=size_category,
         )
-        query = query.order_by(self.model.id.desc()).limit(limit).offset(offset)
+        query = query.order_by(*self._shop_ordering()).limit(limit).offset(offset)
         result = await self.session.execute(query)
         return [
             ArtworkWithLabels.model_validate(model, from_attributes=True)
             for model in result.unique().scalars().all()
         ]
+
+    async def get_existing_ids(self, artwork_ids: list[int]) -> set[int]:
+        if not artwork_ids:
+            return set()
+        result = await self.session.execute(
+            select(self.model.id).where(self.model.id.in_(artwork_ids))
+        )
+        return set(result.scalars().all())
+
+    async def update_shop_display_order(self, artwork_ids: list[int]) -> None:
+        for position, artwork_id in enumerate(artwork_ids, start=1):
+            await self.session.execute(
+                update(self.model)
+                .where(self.model.id == artwork_id)
+                .values(shop_display_order=position)
+            )
 
     async def get_one(self, **filter_by):
         query = self._base_query().filter_by(**filter_by)

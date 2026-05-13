@@ -19,7 +19,7 @@ export function getShopColumnCount({ isMobile, isPhone, gridMode }: { isMobile: 
 }
 
 export function getShopGridColumns(columnCount: number) {
-  return columnCount === 1 ? "1fr" : `repeat(${columnCount}, 1fr)`;
+  return columnCount === 1 ? "1fr" : `repeat(${columnCount}, minmax(0, 1fr))`;
 }
 
 export function getShopGridGap({ isMobile, isPhone, gridMode }: { isMobile: boolean; isPhone: boolean; gridMode: ShopGridMode }) {
@@ -38,4 +38,14 @@ export function getShopGridGap({ isMobile, isPhone, gridMode }: { isMobile: bool
   if (gridMode === "1") return "2.4rem 24px";
   if (gridMode === "2") return "1.8rem 16px";
   return "1.2rem 10px";
+}
+
+export function getShopCardMaxWidth({ isMobile, gridMode }: { isMobile: boolean; gridMode: ShopGridMode }) {
+  if (isMobile) {
+    return undefined;
+  }
+
+  if (gridMode === "1") return 500;
+  if (gridMode === "2") return 360;
+  return 270;
 }

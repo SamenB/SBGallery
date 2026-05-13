@@ -12,7 +12,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.exeptions import (
     DatabaseException,
+    InvalidDataException,
     ObjectAlreadyExistsException,
+    ObjectNotFoundException,
 )
 from src.print_on_demand import get_print_provider
 from src.schemas.artworks import (
@@ -160,6 +162,7 @@ class ArtworkService(BaseService):
         size_category: str | None = None,
         country_code: str | None = None,
         surface: str = "shop",
+        sort: str | None = None,
     ):
         """
         Retrieves a list of artworks based on filtered availability and metadata.
@@ -178,6 +181,7 @@ class ArtworkService(BaseService):
                 orientation=orientation,
                 size_category=size_category,
                 surface=surface,
+                sort=sort or ("shop_order" if surface == "shop" else "newest"),
             )
         except SQLAlchemyError:
             raise DatabaseException
@@ -266,6 +270,26 @@ class ArtworkService(BaseService):
             include_print_readiness,
         )
         return artworks
+
+    async def update_shop_order(self, artwork_ids: list[int]):
+        if len(artwork_ids) != len(set(artwork_ids)):
+            raise InvalidDataException(detail="Shop order contains duplicate artwork IDs.")
+
+        try:
+            existing_ids = await self.db.artworks.get_existing_ids(artwork_ids)
+            missing_ids = sorted(set(artwork_ids) - existing_ids)
+            if missing_ids:
+                missing_preview = ", ".join(str(artwork_id) for artwork_id in missing_ids[:10])
+                raise ObjectNotFoundException(detail=f"Artwork IDs not found: {missing_preview}")
+
+            await self.db.artworks.update_shop_display_order(artwork_ids)
+            await self.db.commit()
+        except SQLAlchemyError:
+            await self.db.rollback()
+            raise DatabaseException
+
+        logger.info("Shop artwork order updated: count={}", len(artwork_ids))
+        return {"status": "OK", "count": len(artwork_ids)}
 
     async def _refresh_materialized_storefront(self, artwork_ids: list[int]) -> None:
         if not artwork_ids:

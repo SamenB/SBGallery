@@ -308,6 +308,24 @@ export function uploadFormDataWithProgress<T>(
     return send(false);
 }
 
+export function canAppearInShopOrder(artwork: {
+    show_in_shop?: boolean;
+    original_status?: string | null;
+    has_canvas_print?: boolean;
+    has_canvas_print_limited?: boolean;
+    has_paper_print?: boolean;
+    has_paper_print_limited?: boolean;
+}): boolean {
+    return Boolean(
+        artwork.show_in_shop &&
+            (artwork.original_status === "available" ||
+                artwork.has_canvas_print ||
+                artwork.has_canvas_print_limited ||
+                artwork.has_paper_print ||
+                artwork.has_paper_print_limited)
+    );
+}
+
 export function getDerivativeStrategyLabel(strategy: string | null | undefined): string | null {
     if (!strategy) {
         return null;

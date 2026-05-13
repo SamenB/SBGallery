@@ -48,4 +48,10 @@ export interface Product {
 export interface Label { id: number; title: string; category_id?: number; }
 export interface LabelCategory { id: number; title: string; }
 
-export type SortKey = "newest" | "price-low" | "price-high" | "size-small" | "size-large";
+export type SortKey =
+    | "curated"
+    | "newest"
+    | "price-low"
+    | "price-high"
+    | "size-small"
+    | "size-large";

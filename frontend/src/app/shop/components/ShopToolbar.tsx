@@ -1,19 +1,35 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { SORT_OPTIONS } from "../constants";
 
 type ShopToolbarProps = {
   resultCount: number;
   activeFilterCount: number;
   isMobile: boolean;
+  desktopFiltersCollapsed: boolean;
   gridMode: "1" | "2" | "3";
   sortIdx: number;
   onOpenFilters: () => void;
+  onToggleDesktopFilters: () => void;
   onGridModeChange: (value: "1" | "2" | "3") => void;
   onSortChange: (value: number) => void;
 };
 
-export function ShopToolbar({ resultCount, activeFilterCount, isMobile, gridMode, sortIdx, onOpenFilters, onGridModeChange, onSortChange }: ShopToolbarProps) {
+export function ShopToolbar({
+  resultCount,
+  activeFilterCount,
+  isMobile,
+  desktopFiltersCollapsed,
+  gridMode,
+  sortIdx,
+  onOpenFilters,
+  onToggleDesktopFilters,
+  onGridModeChange,
+  onSortChange,
+}: ShopToolbarProps) {
+  const DesktopFilterIcon = desktopFiltersCollapsed ? ChevronRight : ChevronLeft;
+
   return (
     <div
       style={{
@@ -29,6 +45,22 @@ export function ShopToolbar({ resultCount, activeFilterCount, isMobile, gridMode
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem", flexShrink: 0 }}>
+        {!isMobile && (
+          <button
+            type="button"
+            className="shop-toolbar-filter-toggle"
+            aria-controls="shop-desktop-filters"
+            aria-expanded={!desktopFiltersCollapsed}
+            onClick={onToggleDesktopFilters}
+          >
+            <SlidersHorizontal size={14} strokeWidth={1.5} aria-hidden="true" />
+            <span>{desktopFiltersCollapsed ? "Show filters" : "Hide filters"}</span>
+            {activeFilterCount > 0 && (
+              <span className="shop-toolbar-filter-count">{activeFilterCount}</span>
+            )}
+            <DesktopFilterIcon size={13} strokeWidth={1.6} aria-hidden="true" />
+          </button>
+        )}
         <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.75rem", fontWeight: 300, color: "var(--color-muted)", whiteSpace: "nowrap" }}>{resultCount} works</span>
         {isMobile && (
           <button

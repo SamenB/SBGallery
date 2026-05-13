@@ -6,7 +6,12 @@ Includes CRUD operations, bulk creation, and image uploading.
 from fastapi import APIRouter, Body, File, Form, Query, UploadFile
 
 from src.api.dependencies import AdminDep, DBDep
-from src.schemas.artworks import ArtworkAddBulk, ArtworkAddRequest, ArtworkPatchRequest
+from src.schemas.artworks import (
+    ArtworkAddBulk,
+    ArtworkAddRequest,
+    ArtworkPatchRequest,
+    ArtworkShopOrderRequest,
+)
 from src.services.artwork_media import ArtworkMediaService
 from src.services.artwork_print_workflow import ArtworkPrintWorkflowService
 from src.services.artworks import ArtworkService
@@ -73,6 +78,11 @@ async def get_artworks(
         pattern="^(shop|gallery|all)$",
         description="Public surface to read: shop, gallery, or all visible artworks.",
     ),
+    sort: str | None = Query(
+        None,
+        pattern="^(shop_order|newest)$",
+        description="Optional public listing order. Shop defaults to curated order.",
+    ),
 ):
     """
     Retrieves a list of artworks with optional filtering and pagination.
@@ -90,6 +100,7 @@ async def get_artworks(
         size_category=size_category,
         country_code=country.upper() if country else None,
         surface=surface,
+        sort=sort,
     )
 
 
@@ -148,6 +159,18 @@ async def update_artwork(
     """
     await ArtworkService(db).update_artwork(artwork_id, artwork_data)
     return {"status": "OK"}
+
+
+@router.put("/admin/shop-order")
+async def update_shop_artwork_order(
+    admin_id: AdminDep,
+    db: DBDep,
+    order_data: ArtworkShopOrderRequest = Body(),
+):
+    """
+    Saves the admin-curated default artwork order for public shop listings.
+    """
+    return await ArtworkService(db).update_shop_order(order_data.artwork_ids)
 
 
 @router.patch("/{artwork_id}")

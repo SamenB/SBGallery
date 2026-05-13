@@ -4,6 +4,7 @@ import SimpleArtworkCropperModal from "./SimpleArtworkCropperModal";
 import { ArtworkAdminHeader, ArtworkNotice } from "./artworks/ArtworkAdminHeader";
 import { ArtworkEditorShell } from "./artworks/ArtworkEditorShell";
 import { ArtworkGrid } from "./artworks/ArtworkGrid";
+import { ArtworkShopOrderGrid } from "./artworks/ArtworkShopOrderGrid";
 import { useArtworkAdmin } from "./artworks/useArtworkAdmin";
 
 export default function ArtworksTab() {
@@ -23,15 +24,28 @@ export default function ArtworksTab() {
       <ArtworkAdminHeader
         artworkCount={admin.artworks.length}
         isFormOpen={admin.isFormOpen}
+        isOrderingShop={admin.isOrderingShop}
         payloadRefreshLoading={admin.payloadRefreshLoading}
         onRefreshPayloads={() => void admin.refreshArtworkPayloads()}
+        onToggleShopOrder={admin.toggleShopOrder}
         onToggleEditor={admin.isFormOpen ? admin.resetEditor : admin.openNewEditor}
       />
 
       <ArtworkNotice message={admin.payloadRefreshMessage} tone="success" />
       <ArtworkNotice message={admin.payloadRefreshError} tone="error" />
 
-      {admin.isFormOpen ? (
+      {admin.isOrderingShop ? (
+        <ArtworkShopOrderGrid
+          artworks={admin.shopOrderDraft}
+          saving={admin.savingShopOrder}
+          dirty={admin.shopOrderDirty}
+          message={admin.shopOrderMessage}
+          error={admin.shopOrderError}
+          onReorder={admin.setShopOrderDraft}
+          onSave={() => void admin.saveShopOrder()}
+          onCancel={admin.closeShopOrder}
+        />
+      ) : admin.isFormOpen ? (
         <ArtworkEditorShell
           formData={admin.formData}
           setFormData={admin.setFormData}
@@ -61,7 +75,9 @@ export default function ArtworksTab() {
         />
       ) : null}
 
-      <ArtworkGrid artworks={admin.artworks} readinessRefreshing={admin.readinessRefreshing} handleEditClick={admin.handleEditClick} handleDelete={admin.handleDelete} />
+      {!admin.isOrderingShop ? (
+        <ArtworkGrid artworks={admin.artworks} readinessRefreshing={admin.readinessRefreshing} handleEditClick={admin.handleEditClick} handleDelete={admin.handleDelete} />
+      ) : null}
       <SimpleArtworkCropperModal isOpen={admin.cropImageIndex !== null} imageSrc={admin.cropImageIndex !== null ? admin.imageItems[admin.cropImageIndex]?.url || "" : ""} onClose={() => admin.setCropImageIndex(null)} onSaveCrop={admin.handleSaveCrop} />
     </div>
   );

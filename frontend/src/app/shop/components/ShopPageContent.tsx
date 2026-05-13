@@ -12,14 +12,18 @@ import { useShopFilters } from "../hooks/useShopFilters";
 import { useShopViewport } from "../hooks/useShopViewport";
 import { ShopAuthPrompt } from "./ShopAuthPrompt";
 import { ShopCatalogResults } from "./ShopCatalogResults";
+import { ShopDesktopFiltersSidebar } from "./ShopDesktopFiltersSidebar";
 import { ShopFiltersPanel } from "./ShopFiltersPanel";
 import { ShopMobileFiltersDrawer } from "./ShopMobileFiltersDrawer";
 import { ShopToolbar } from "./ShopToolbar";
 import {
+  getShopCardMaxWidth,
   getShopColumnCount,
   getShopGridColumns,
   getShopGridGap,
 } from "../utils/shopGridLayout";
+
+const DESKTOP_FILTERS_COLLAPSED_KEY = "artshop_shop_filters_collapsed_pc";
 
 export function ShopPageContent() {
   const { user } = useUser();
@@ -33,6 +37,7 @@ export function ShopPageContent() {
 
   const [sortIdx, setSortIdx] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [desktopFiltersCollapsed, setDesktopFiltersCollapsed] = useState(false);
   const [gridMode, setGridMode] = useState<"1" | "2" | "3">("2");
   const [gridLoaded, setGridLoaded] = useState(false);
   const [naturalAspectRatios, setNaturalAspectRatios] = useState<
@@ -67,6 +72,21 @@ export function ShopPageContent() {
       localStorage.setItem("artshop_shop_grid", gridMode);
     }
   }, [gridMode, gridLoaded]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(DESKTOP_FILTERS_COLLAPSED_KEY);
+    if (saved === "true") {
+      setDesktopFiltersCollapsed(true);
+    }
+  }, []);
+
+  const handleToggleDesktopFilters = useCallback(() => {
+    setDesktopFiltersCollapsed((previous) => {
+      const next = !previous;
+      localStorage.setItem(DESKTOP_FILTERS_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -196,6 +216,7 @@ export function ShopPageContent() {
   const columnCount = getShopColumnCount({ isMobile, isPhone, gridMode });
   const gridColumns = getShopGridColumns(columnCount);
   const gridGap = getShopGridGap({ isMobile, isPhone, gridMode });
+  const cardMaxWidth = getShopCardMaxWidth({ isMobile, gridMode });
   const displayedAspectRatioRange = useMemo(() => {
     const ratios = displayed
       .map((product) =>
@@ -207,17 +228,11 @@ export function ShopPageContent() {
       return undefined;
     }
 
-    const containerWidths = displayed
-      .map((product) => artworkContainerWidths[product.id])
-      .filter((width): width is number => Boolean(width));
-
     return {
       min: Math.min(...ratios),
       max: Math.max(...ratios),
-      containerWidth:
-        containerWidths.length > 0 ? Math.min(...containerWidths) : undefined,
     };
-  }, [artworkContainerWidths, displayed, naturalAspectRatios]);
+  }, [displayed, naturalAspectRatios]);
   const rowImageStageHeights = useMemo(() => {
     if (!isMobile || gridMode === "1") {
       return undefined;
@@ -298,52 +313,13 @@ export function ShopPageContent() {
       </ShopMobileFiltersDrawer>
 
       <div style={{ display: "flex", gap: "0", alignItems: "flex-start" }}>
-        {/* Desktop Sidebar: Static panel for persistent filtering during navigation. */}
-        <aside
-          className="shop-desktop-sidebar"
-          style={{
-            width: "240px",
-            minWidth: "240px",
-            flexShrink: 0,
-            paddingLeft: "1.25rem",
-            paddingRight: "1.5rem",
-            paddingTop: "1.25rem",
-            borderRight: "1px solid rgba(26,26,24,0.07)",
-          }}
+        <ShopDesktopFiltersSidebar
+          collapsed={desktopFiltersCollapsed}
+          activeFilterCount={activeFilterCount}
+          onClearAll={clearAll}
         >
-          {/* Clear All action: Strategically reserved space to prevent layout shifts. */}
-          <button
-            onClick={clearAll}
-            disabled={activeFilterCount === 0}
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "0.58rem",
-              fontWeight: 400,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: activeFilterCount > 0 ? "#888" : "transparent",
-              background: "none",
-              border: "none",
-              cursor: activeFilterCount > 0 ? "pointer" : "default",
-              padding: "0 0 0.6rem",
-              display: "block",
-              transition: "color 0.18s",
-              pointerEvents: activeFilterCount === 0 ? "none" : "auto",
-              textDecoration: "underline",
-              textUnderlineOffset: "2px",
-            }}
-            onMouseEnter={(e) => {
-              if (activeFilterCount > 0)
-                e.currentTarget.style.color = "#1a1a18";
-            }}
-            onMouseLeave={(e) => {
-              if (activeFilterCount > 0) e.currentTarget.style.color = "#888";
-            }}
-          >
-            Clear all
-          </button>
           {filtersPanel}
-        </aside>
+        </ShopDesktopFiltersSidebar>
 
         <div
           style={{
@@ -352,15 +328,18 @@ export function ShopPageContent() {
             padding: isMobile
               ? "0.75rem 0.35rem 6rem"
               : "1rem 2.5rem 6rem 2rem",
+            transition: "padding-left 0.42s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           <ShopToolbar
             resultCount={filtered.length}
             activeFilterCount={activeFilterCount}
             isMobile={isMobile}
+            desktopFiltersCollapsed={desktopFiltersCollapsed}
             gridMode={gridMode}
             sortIdx={sortIdx}
             onOpenFilters={() => setDrawerOpen(true)}
+            onToggleDesktopFilters={handleToggleDesktopFilters}
             onGridModeChange={handleSetGridMode}
             onSortChange={setSortIdx}
           />
@@ -372,6 +351,8 @@ export function ShopPageContent() {
             displayed={displayed}
             gridColumns={gridColumns}
             gridGap={gridGap}
+            cardMaxWidth={cardMaxWidth}
+            layoutVersion={desktopFiltersCollapsed ? "filters-collapsed" : "filters-open"}
             gridMode={gridMode}
             isMobile={isMobile}
             countryCode={activeCountryCode}

@@ -13,6 +13,8 @@ type ShopCatalogResultsProps = {
   displayed: Product[];
   gridColumns: string;
   gridGap: string;
+  cardMaxWidth?: number;
+  layoutVersion?: string;
   gridMode: ShopGridMode;
   isMobile: boolean;
   countryCode: string;
@@ -35,6 +37,8 @@ export function ShopCatalogResults({
   displayed,
   gridColumns,
   gridGap,
+  cardMaxWidth,
+  layoutVersion,
   gridMode,
   isMobile,
   countryCode,
@@ -68,6 +72,8 @@ export function ShopCatalogResults({
               zoneH={IMAGE_ZONE[gridMode] || 380}
               gridMode={gridMode}
               isMobile={isMobile}
+              maxCardWidth={cardMaxWidth}
+              layoutVersion={layoutVersion}
               countryCode={countryCode}
               likedIds={likedIds}
               listIndex={index}

@@ -31,7 +31,7 @@ async function fetchSettings(): Promise<HomeSettings> {
 }
 
 async function fetchFeaturedWorks(): Promise<HomeArtwork[]> {
-  const response = await fetch(`${getApiUrl()}/artworks?limit=3`, {
+  const response = await fetch(`${getApiUrl()}/artworks?limit=3&sort=newest`, {
     next: { revalidate: 60 },
   });
   if (!response.ok)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePreferences } from "@/context/PreferencesContext";
 import { getApiUrl, getImageUrl } from "@/utils";
@@ -9,8 +9,10 @@ import { STATUS } from "../constants";
 import { buildArtworkHref, getEqualAreaImageSize, getProductAspectRatio, getStorefrontSummary } from "../utils";
 import type { AspectRatioRange } from "../utils";
 
-export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, fixedImageStageHeight, useNaturalMobileSizing, onNaturalAspectRatio, onContainerWidthChange }: {
+export function ProductCard({ product, zoneH, gridMode, isMobile, maxCardWidth, layoutVersion, countryCode, initialLiked, likedIds, onAuthRequired, listIndex, onLikeChange, rowAspectRatioRange, fixedImageStageHeight, useNaturalMobileSizing, onNaturalAspectRatio, onContainerWidthChange }: {
     product: Product; zoneH: number; gridMode: string; isMobile: boolean;
+    maxCardWidth?: number;
+    layoutVersion?: string;
     countryCode?: string;
     initialLiked?: boolean;
     likedIds?: Set<number>;
@@ -46,6 +48,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     const containerRef = useRef<HTMLDivElement>(null);
     const [textPad, setTextPad] = useState(0);
     const [emptyBottom, setEmptyBottom] = useState(0);
+    const [measuredImgW, setMeasuredImgW] = useState(0);
     const [measuredImgH, setMeasuredImgH] = useState(0);
     const [containerWidth, setContainerWidth] = useState(0);
     const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | undefined>(undefined);
@@ -84,6 +87,13 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
     }, [artworkRatio, equalAreaImageSize, gridMode, isMobile, rowAspectRatioMin, zoneH]);
     const stageHeight = fixedImageStageHeight ?? measuredStageHeight;
     const imageStageHeight = fixedImageStageHeight !== undefined || !shouldUseNaturalMobileSizing ? `${stageHeight}px` : "auto";
+    const layoutImgW = equalAreaImageSize?.width ?? measuredImgW;
+    const layoutImgH = equalAreaImageSize?.height ?? measuredImgH;
+    const layoutTextPad = layoutImgW > 0 ? Math.max(0, (containerWidth - layoutImgW) / 2) : textPad;
+    const layoutEmptyBottom =
+        layoutImgH > 0 && imageStageHeight !== "auto"
+            ? Math.max(0, (stageHeight - layoutImgH) / 2)
+            : emptyBottom;
 
     const reportNaturalAspectRatio = useCallback((ratio: number) => {
         if (!Number.isFinite(ratio)) return;
@@ -106,13 +116,14 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
         const inner = c.querySelector(".art-card-inner") as HTMLElement;
         if (!inner) return;
         const nextContainerWidth = c.clientWidth;
+        reportContainerWidth(nextContainerWidth);
         if (inner.tagName === "IMG") {
             const img = inner as HTMLImageElement;
-            if (!img.complete || !img.naturalWidth) return;
-            const ratio = img.naturalWidth / img.naturalHeight;
-            reportNaturalAspectRatio(ratio);
+            if (img.complete && img.naturalWidth) {
+                const ratio = img.naturalWidth / img.naturalHeight;
+                reportNaturalAspectRatio(ratio);
+            }
         }
-        reportContainerWidth(nextContainerWidth);
         setTextPad((prev) => {
             const next = Math.max(0, (nextContainerWidth - inner.offsetWidth) / 2);
             return prev === next ? prev : next;
@@ -125,6 +136,10 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
             const next = inner.offsetHeight;
             return prev === next ? prev : next;
         });
+        setMeasuredImgW((prev) => {
+            const next = inner.offsetWidth;
+            return prev === next ? prev : next;
+        });
     }, [reportContainerWidth, reportNaturalAspectRatio]);
 
     useEffect(() => {
@@ -132,6 +147,27 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
         window.addEventListener("resize", recalc);
         return () => window.removeEventListener("resize", recalc);
     }, [recalc]);
+
+    useLayoutEffect(() => {
+        recalc();
+    }, [layoutVersion, recalc]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container || typeof ResizeObserver === "undefined") return;
+
+        const observer = new ResizeObserver(() => {
+            recalc();
+        });
+        observer.observe(container);
+
+        const inner = container.querySelector(".art-card-inner");
+        if (inner) observer.observe(inner);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [recalc, imgSrc]);
 
     useEffect(() => {
         const frameId = requestAnimationFrame(recalc);
@@ -191,6 +227,8 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
             className={`art-card magnetic-scroll${listIndex !== undefined && listIndex < 2 ? " no-scroll-anim" : ""}`}
             style={{
                 display: "flex", flexDirection: "column", width: "100%", padding: 0,
+                maxWidth: maxCardWidth ? `${maxCardWidth}px` : undefined,
+                justifySelf: maxCardWidth ? "center" : undefined,
                 transform: imgHovered && !isMobile ? "scale(1.03)" : undefined,
                 transformOrigin: "center center",
                 transition: "transform 0.2s ease-out",
@@ -244,9 +282,9 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
             {(gridMode !== "3" || !isMobile) && (
                 <div className="art-card-info" style={{
                     position: "relative", zIndex: 5,
-                    marginTop: measuredImgH > 0 ? `-${emptyBottom + measuredImgH + 4}px` : `-${emptyBottom - (isMobile ? 10 : 8)}px`,
-                    marginLeft: `${textPad - 4}px`, marginRight: `${textPad - 4}px`,
-                    paddingTop: measuredImgH > 0 ? `${measuredImgH + (isMobile ? 10 : 8) + 4}px` : "0.15rem",
+                    marginTop: layoutImgH > 0 ? `-${layoutEmptyBottom + layoutImgH + 4}px` : `-${layoutEmptyBottom - (isMobile ? 10 : 8)}px`,
+                    marginLeft: `${layoutTextPad - 4}px`, marginRight: `${layoutTextPad - 4}px`,
+                    paddingTop: layoutImgH > 0 ? `${layoutImgH + (isMobile ? 10 : 8) + 4}px` : "0.15rem",
                     paddingBottom: "0.5rem", paddingLeft: "0.55rem", paddingRight: "0.55rem",
                     backgroundColor: "rgba(235, 235, 237, 0.82)", backdropFilter: "blur(12px) saturate(1.3)",
                     WebkitBackdropFilter: "blur(12px) saturate(1.3)",
@@ -307,7 +345,7 @@ export function ProductCard({ product, zoneH, gridMode, isMobile, countryCode, i
                         aria-label={liked ? "Unlike artwork" : "Like artwork"}
                         style={{
                             position: "absolute",
-                            top: measuredImgH > 0 ? `${measuredImgH + (isMobile ? 10 : 8) + 2}px` : "2px",
+                            top: layoutImgH > 0 ? `${layoutImgH + (isMobile ? 10 : 8) + 2}px` : "2px",
                             right: "2px",
                             zIndex: 2,
                             background: "none", border: "none", cursor: "pointer", padding: "6px", margin: 0,

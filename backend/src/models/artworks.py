@@ -62,6 +62,7 @@ class ArtworksOrm(Base):
     print_workflow_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     show_in_shop: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    shop_display_order: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
     # ── Print availability flags ──────────────────────────────────────────────
     # Each flag independently controls whether a given print type is purchasable.

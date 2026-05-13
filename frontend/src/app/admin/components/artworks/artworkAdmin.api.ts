@@ -11,7 +11,7 @@ import type { RefreshPayload } from "./artworkAdmin.mappers";
 
 export async function fetchArtworkAdminData() {
   const [artworksRes, categoriesRes, labelsRes, ratiosRes] = await Promise.all([
-    apiFetch(`${getApiUrl()}/artworks/admin/list?limit=200`),
+    apiFetch(`${getApiUrl()}/artworks/admin/list?limit=1000`),
     apiFetch(`${getApiUrl()}/labels/categories`),
     apiFetch(`${getApiUrl()}/labels`),
     apiFetch(`${getApiUrl()}/print-pricing/aspect-ratios`),
@@ -28,7 +28,7 @@ export async function fetchArtworkAdminData() {
 
 export async function fetchArtworkReadinessSummaries() {
   const response = await apiFetch(
-    `${getApiUrl()}/artworks/admin/list?limit=200&include_print_readiness=true`,
+    `${getApiUrl()}/artworks/admin/list?limit=1000&include_print_readiness=true`,
   );
   if (!response.ok)
     throw new Error(`Readiness request failed with ${response.status}`);
@@ -117,6 +117,24 @@ export async function deleteArtwork(artworkId: number) {
     method: "DELETE",
   });
   if (!response.ok) throw new Error("Delete failed.");
+}
+
+export async function saveArtworkShopOrder(artworkIds: number[]) {
+  const response = await apiFetch(`${getApiUrl()}/artworks/admin/shop-order`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ artwork_ids: artworkIds }),
+  });
+  const payload: { detail?: string; message?: string } = await apiJson<{
+    detail?: string;
+    message?: string;
+  }>(response).catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      payload.detail || payload.message || `Shop order save failed (${response.status}).`,
+    );
+  }
+  return payload;
 }
 
 export async function deleteArtworkPrintAsset(

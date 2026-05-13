@@ -160,6 +160,10 @@ class Artwork(ArtworkAdd):
 
     id: int = Field(..., description="ID of the artwork")
     slug: str | None = Field(None, description="Unique slug for the artwork")
+    shop_display_order: int | None = Field(
+        None,
+        description="Admin-curated default display order for public shop listings.",
+    )
 
     @model_validator(mode="after")
     def ensure_slug(self) -> "Artwork":
@@ -245,6 +249,17 @@ class ArtworkPatchRequest(BaseModel):
     )
     show_in_gallery: bool | None = Field(None)
     show_in_shop: bool | None = Field(None)
+
+
+class ArtworkShopOrderRequest(BaseModel):
+    """
+    Admin request for saving the default shop artwork order.
+    """
+
+    artwork_ids: list[int] = Field(
+        default_factory=list,
+        description="Artwork IDs in the exact order they should appear by default in shop.",
+    )
 
 
 class ArtworkPatch(BaseModel):

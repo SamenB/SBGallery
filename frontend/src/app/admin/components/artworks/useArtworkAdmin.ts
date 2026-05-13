@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   AspectRatio,
   Artwork,
@@ -16,6 +16,7 @@ import {
   fetchArtworkWorkflow,
   patchArtworkImages,
   refreshArtworkStorefrontPayloads,
+  saveArtworkShopOrder,
   saveArtworkDraft,
   uploadArtworkImages,
 } from "./artworkAdmin.api";
@@ -27,12 +28,37 @@ import {
 import {
   buildFormPayload,
   createDefaultFormState,
+  canAppearInShopOrder,
   hasCanvasOfferings,
   hasMissingPrintRatio,
   hasPrintOfferings,
   resolveImageUrl,
 } from "./utils";
 import { useArtworkAssetActions } from "./useArtworkAssetActions";
+
+function applyShopOrder(artworks: Artwork[], orderedShopArtworks: Artwork[]) {
+  const positionById = new Map(
+    orderedShopArtworks.map((artwork, index) => [artwork.id, index + 1]),
+  );
+
+  return [...artworks]
+    .map((artwork) =>
+      positionById.has(artwork.id)
+        ? { ...artwork, shop_display_order: positionById.get(artwork.id) ?? null }
+        : artwork,
+    )
+    .sort((a, b) => {
+      const aPosition = positionById.get(a.id);
+      const bPosition = positionById.get(b.id);
+      if (aPosition && bPosition) return aPosition - bPosition;
+      if (aPosition) return -1;
+      if (bPosition) return 1;
+      const aStored = a.shop_display_order ?? Number.MAX_SAFE_INTEGER;
+      const bStored = b.shop_display_order ?? Number.MAX_SAFE_INTEGER;
+      if (aStored !== bStored) return aStored - bStored;
+      return b.id - a.id;
+    });
+}
 
 export function useArtworkAdmin() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
@@ -60,6 +86,12 @@ export function useArtworkAdmin() {
   const [payloadRefreshError, setPayloadRefreshError] = useState<string | null>(
     null,
   );
+  const [isOrderingShop, setIsOrderingShop] = useState(false);
+  const [shopOrderDraft, setShopOrderDraft] = useState<Artwork[]>([]);
+  const [shopOrderBaselineIds, setShopOrderBaselineIds] = useState<number[]>([]);
+  const [savingShopOrder, setSavingShopOrder] = useState(false);
+  const [shopOrderMessage, setShopOrderMessage] = useState<string | null>(null);
+  const [shopOrderError, setShopOrderError] = useState<string | null>(null);
   const [formData, setFormData] = useState<ArtworkFormState>(
     createDefaultFormState(),
   );
@@ -145,6 +177,62 @@ export function useArtworkAdmin() {
       setPayloadRefreshLoading(false);
     }
   }, [editingId, fetchData, fetchWorkflow]);
+
+  const openShopOrder = useCallback(() => {
+    const shopArtworks = artworks.filter(canAppearInShopOrder);
+    setShopOrderDraft(shopArtworks);
+    setShopOrderBaselineIds(shopArtworks.map((artwork) => artwork.id));
+    setShopOrderMessage(null);
+    setShopOrderError(null);
+    setIsOrderingShop(true);
+  }, [artworks]);
+
+  const closeShopOrder = useCallback(() => {
+    setIsOrderingShop(false);
+    setShopOrderMessage(null);
+    setShopOrderError(null);
+  }, []);
+
+  const toggleShopOrder = useCallback(() => {
+    if (isOrderingShop) {
+      closeShopOrder();
+      return;
+    }
+    openShopOrder();
+  }, [closeShopOrder, isOrderingShop, openShopOrder]);
+
+  const shopOrderDirty = useMemo(
+    () =>
+      shopOrderDraft.length !== shopOrderBaselineIds.length ||
+      shopOrderDraft.some((artwork, index) => artwork.id !== shopOrderBaselineIds[index]),
+    [shopOrderBaselineIds, shopOrderDraft],
+  );
+
+  const saveShopOrder = useCallback(async () => {
+    const orderedIds = shopOrderDraft.map((artwork) => artwork.id);
+    setSavingShopOrder(true);
+    setShopOrderMessage(null);
+    setShopOrderError(null);
+    try {
+      await saveArtworkShopOrder(orderedIds);
+      setArtworks((previous) => applyShopOrder(previous, shopOrderDraft));
+      setShopOrderDraft((previous) =>
+        previous.map((artwork, index) => ({
+          ...artwork,
+          shop_display_order: index + 1,
+        })),
+      );
+      setShopOrderBaselineIds(orderedIds);
+      setShopOrderMessage("Shop order saved.");
+    } catch (error) {
+      console.error(error);
+      setShopOrderError(
+        error instanceof Error ? error.message : "Could not save shop order.",
+      );
+    } finally {
+      setSavingShopOrder(false);
+    }
+  }, [shopOrderDraft]);
 
   useEffect(() => {
     void fetchData();
@@ -368,6 +456,12 @@ export function useArtworkAdmin() {
     payloadRefreshLoading,
     payloadRefreshMessage,
     payloadRefreshError,
+    isOrderingShop,
+    shopOrderDraft,
+    shopOrderDirty,
+    savingShopOrder,
+    shopOrderMessage,
+    shopOrderError,
     formData,
     setFormData,
     setImageItems,
@@ -375,6 +469,10 @@ export function useArtworkAdmin() {
     setEditingWhiteBorder,
     setWhiteBorderDraft,
     refreshArtworkPayloads,
+    setShopOrderDraft,
+    toggleShopOrder,
+    closeShopOrder,
+    saveShopOrder,
     resetEditor,
     openNewEditor,
     handleSaveCrop,
