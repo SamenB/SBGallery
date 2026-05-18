@@ -37,10 +37,33 @@ const FRAME_COLOR_FALLBACKS: Record<string, string> = {
   "antique silver": "#b9b5aa",
 };
 
+const FRAME_SWATCH_SCALE: Record<string, Record<string, number>> = {
+  paperPrintBoxFramed: {
+    black: 1.06,
+    white: 1.08,
+    natural: 1.03,
+    brown: 1,
+  },
+  paperPrintClassicFramed: {
+    black: 1.09,
+    white: 1.1,
+    natural: 1.06,
+    brown: 1,
+    gold: 1.09,
+    silver: 1.09,
+  },
+  canvasFloatingFrame: {
+    black: 1.52,
+    white: 1.65,
+    brown: 1,
+  },
+};
+
 export interface FrameColorSwatch {
   imageSrc?: string;
   fallbackColor: string;
   label: string;
+  displayScale?: number;
 }
 
 export function getVisibleStorefrontCards(cards: StorefrontCard[] | undefined): StorefrontCard[] {
@@ -70,6 +93,7 @@ export function getFrameColorSwatch(
     imageSrc,
     fallbackColor: FRAME_COLOR_FALLBACKS[normalizedValue] || "#d8d5cc",
     label: value,
+    displayScale: FRAME_SWATCH_SCALE[card.category_id]?.[normalizedValue],
   };
 }
 

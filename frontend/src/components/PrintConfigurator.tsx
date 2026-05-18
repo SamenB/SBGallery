@@ -167,30 +167,33 @@ export default function PrintConfigurator({
             <span className="step-number">1</span>
             <span className="step-text">Select Format</span>
           </div>
-          <div className="step-select-wrap">
+          <div className={`step-select-wrap ${openDropdown === "format" ? "open" : ""}`}>
             <button
               className={`step-trigger ${openDropdown === "format" ? "open" : ""}`}
               onClick={() => setOpenDropdown(openDropdown === "format" ? null : "format")}
               type="button"
+              aria-expanded={openDropdown === "format"}
             >
               <span>{selectedCard?.label || "Select..."}</span>
               <span className="step-chevron" />
             </button>
             <div className={`step-options ${openDropdown === "format" ? "open" : ""}`}>
-              {cards.map((card) => (
-                <button
-                  key={card.category_id}
-                  type="button"
-                  className={`step-option ${selectedCard?.category_id === card.category_id ? "active" : ""}`}
-                  onClick={() => {
-                    setSelectedCardId(card.category_id);
-                    setOpenDropdown(null);
-                  }}
-                >
-                  <span>{card.label}</span>
-                  <span className="opt-check" />
-                </button>
-              ))}
+              <div className="step-options-inner">
+                {cards.map((card) => (
+                  <button
+                    key={card.category_id}
+                    type="button"
+                    className={`step-option ${selectedCard?.category_id === card.category_id ? "active" : ""}`}
+                    onClick={() => {
+                      setSelectedCardId(card.category_id);
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <span>{card.label}</span>
+                    <span className="opt-check" />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -201,11 +204,12 @@ export default function PrintConfigurator({
           <span className="step-number">{cards.length > 1 ? 2 : 1}</span>
           <span className="step-text">Select Size</span>
         </div>
-        <div className="step-select-wrap">
+        <div className={`step-select-wrap ${openDropdown === "size" ? "open" : ""}`}>
           <button
             className={`step-trigger ${openDropdown === "size" ? "open" : ""}`}
             onClick={() => setOpenDropdown(openDropdown === "size" ? null : "size")}
             type="button"
+            aria-expanded={openDropdown === "size"}
           >
             <span>
               {formattedSize}{" "}
@@ -219,34 +223,36 @@ export default function PrintConfigurator({
             <span className="step-chevron" />
           </button>
           <div className={`step-options ${openDropdown === "size" ? "open" : ""}`}>
-            {selectedCard?.size_options.map((size) => {
-              const sizeTotal = resolveRoundedCustomerPriceParts(size)?.total ?? null;
-              return (
-                <button
-                  key={getSizeKey(size)}
-                  type="button"
-                  className={`step-option ${selectedSize && getSizeKey(selectedSize) === getSizeKey(size) ? "active" : ""}`}
-                  onClick={() => {
-                    setSelectedSizeKeys((prev) => ({
-                      ...prev,
-                      [selectedCardKey]: getSizeKey(size),
-                    }));
-                    setOpenDropdown(null);
-                  }}
-                >
-                  <span>
-                    {formatSizeLabel(size.size_label || size.slot_size_label, units)}
-                    {sizeTotal !== null ? (
-                      <>
-                        {" "}
-                        - <span className="font-price font-medium">{convertPrice(sizeTotal)}</span>
-                      </>
-                    ) : null}
-                  </span>
-                  <span className="opt-check" />
-                </button>
-              );
-            })}
+            <div className="step-options-inner">
+              {selectedCard?.size_options.map((size) => {
+                const sizeTotal = resolveRoundedCustomerPriceParts(size)?.total ?? null;
+                return (
+                  <button
+                    key={getSizeKey(size)}
+                    type="button"
+                    className={`step-option ${selectedSize && getSizeKey(selectedSize) === getSizeKey(size) ? "active" : ""}`}
+                    onClick={() => {
+                      setSelectedSizeKeys((prev) => ({
+                        ...prev,
+                        [selectedCardKey]: getSizeKey(size),
+                      }));
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <span>
+                      {formatSizeLabel(size.size_label || size.slot_size_label, units)}
+                      {sizeTotal !== null ? (
+                        <>
+                          {" "}
+                          - <span className="font-price font-medium">{convertPrice(sizeTotal)}</span>
+                        </>
+                      ) : null}
+                    </span>
+                    <span className="opt-check" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -272,11 +278,12 @@ export default function PrintConfigurator({
               <span className="step-number">{stepNumber}</span>
               <span className="step-text">{titleCase(key)}</span>
             </div>
-            <div className="step-select-wrap">
+            <div className={`step-select-wrap ${openDropdown === key ? "open" : ""}`}>
               <button
                 className={`step-trigger ${openDropdown === key ? "open" : ""}`}
                 onClick={() => setOpenDropdown(openDropdown === key ? null : key)}
                 type="button"
+                aria-expanded={openDropdown === key}
               >
                 <span className="step-trigger-content">
                   {selectedSwatch && <FrameSwatch swatch={selectedSwatch} />}
@@ -285,36 +292,38 @@ export default function PrintConfigurator({
                 <span className="step-chevron" />
               </button>
               <div className={`step-options ${isFrameColorDropdown ? "frame-color-options" : ""} ${openDropdown === key ? "open" : ""}`}>
-                {isFrameColorDropdown ? (
-                  <FrameColorOptionsPanel
-                    options={options}
-                    selectedValue={selectedValue}
-                    selectedCard={selectedCard}
-                    formatValue={formatAttributeValue}
-                    onSelect={selectAttribute}
-                  />
-                ) : (
-                  options.map((value) => {
-                    const optionSwatch = getFrameColorSwatch(selectedCard, key, value);
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        className={`step-option ${selectedValue === value ? "active" : ""}`}
-                        onClick={() => {
-                          selectAttribute(value);
-                          setOpenDropdown(null);
-                        }}
-                      >
-                        <span className="step-option-main">
-                          {optionSwatch && <FrameSwatch swatch={optionSwatch} />}
-                          <span>{formatAttributeValue(value)}</span>
-                        </span>
-                        <span className="opt-check" />
-                      </button>
-                    );
-                  })
-                )}
+                <div className="step-options-inner">
+                  {isFrameColorDropdown ? (
+                    <FrameColorOptionsPanel
+                      options={options}
+                      selectedValue={selectedValue}
+                      selectedCard={selectedCard}
+                      formatValue={formatAttributeValue}
+                      onSelect={selectAttribute}
+                    />
+                  ) : (
+                    options.map((value) => {
+                      const optionSwatch = getFrameColorSwatch(selectedCard, key, value);
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`step-option ${selectedValue === value ? "active" : ""}`}
+                          onClick={() => {
+                            selectAttribute(value);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          <span className="step-option-main">
+                            {optionSwatch && <FrameSwatch swatch={optionSwatch} />}
+                            <span>{formatAttributeValue(value)}</span>
+                          </span>
+                          <span className="opt-check" />
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           </div>

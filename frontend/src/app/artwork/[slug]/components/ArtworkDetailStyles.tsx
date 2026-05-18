@@ -77,6 +77,12 @@ export function ArtworkDetailStyles() {
           }
           .artwork-slider-wrap { min-height: 520px; }
         }
+        @media (min-width: 1024px) {
+          .artwork-img-col { transform: translateX(-24px); }
+        }
+        @media (min-width: 1280px) {
+          .artwork-img-col { transform: translateX(-32px); }
+        }
         .mobile-title-row { display: flex; }
         .desktop-title-row { display: none; }
         @media (min-width: 768px) {

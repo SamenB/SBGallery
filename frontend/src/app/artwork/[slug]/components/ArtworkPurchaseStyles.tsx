@@ -135,20 +135,23 @@ export function ArtworkPurchaseStyles() {
             @media (hover: hover) and (pointer: fine) { .step-trigger:hover:not(.open) { border-color: rgba(17, 17, 17, 0.35); } }
             .step-chevron { width: 10px; height: 10px; border-right: 1.5px solid var(--color-muted); border-bottom: 1.5px solid var(--color-muted); transform: rotate(45deg); transition: transform 0.25s ease, border-color 0.2s ease; flex-shrink: 0; margin-left: 0.75rem; }
             .step-trigger.open .step-chevron { transform: rotate(-135deg); border-color: var(--color-charcoal); }
-            .step-options { overflow: hidden; max-height: 0; opacity: 0; border: 1.5px solid transparent; border-top: none; border-radius: 0 0 10px 10px; background: #fff; transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease, border-color 0.2s ease; }
-            .step-options.open { max-height: 400px; opacity: 1; border-color: var(--color-charcoal); }
-            .step-options.frame-color-options.open { max-height: 390px; }
+            .step-options { display: grid; grid-template-rows: 0fr; opacity: 0; overflow: hidden; border: 1.5px solid transparent; border-top: none; border-radius: 0 0 10px 10px; background: #fff; transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.2s ease, border-color 0.2s ease; }
+            .step-options.open { grid-template-rows: 1fr; opacity: 1; border-color: var(--color-charcoal); }
+            .step-options-inner { min-height: 0; max-height: min(400px, calc(100vh - 120px)); overflow-x: hidden; overflow-y: auto; visibility: hidden; pointer-events: none; transition: visibility 0s linear 0.32s; }
+            .step-options.open .step-options-inner { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+            .step-options.frame-color-options .step-options-inner { max-height: min(390px, calc(100vh - 140px)); }
             .step-option { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.75rem 1.1rem; font-family: var(--font-sans); font-size: 0.82rem; font-weight: 400; color: var(--color-charcoal-mid); background: transparent; border: none; border-top: 1px solid var(--color-border); cursor: pointer; text-align: left; transition: background 0.15s ease, color 0.15s ease; -webkit-tap-highlight-color: transparent; }
-            .frame-swatch { width: 2.4rem; height: 2.4rem; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 7px; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.08); }
+            .frame-swatch { width: 2.4rem; height: 2.4rem; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 7px; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.08); contain: paint; transform: translateZ(0); }
             .frame-swatch-img { width: 100%; height: 100%; object-fit: contain; background: #fff; display: block; }
             .frame-swatch-fallback { width: 100%; height: 100%; display: block; background: inherit; }
             .frame-color-panel { box-sizing: border-box; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 0.75rem; padding: 0.9rem; border-top: 1px solid var(--color-border); overflow: hidden; }
             .frame-color-preview-wrap { min-width: 0; }
-            .frame-color-preview { width: 100%; min-height: 236px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; }
-            .frame-color-preview-img { width: 100%; height: 100%; min-height: 236px; object-fit: contain; display: block; background: #fff; }
-            .frame-color-preview-fallback { width: 100%; min-height: 236px; display: block; background: inherit; }
+            .frame-color-preview { width: 100%; min-height: 236px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; contain: paint; transform: translateZ(0); }
+            .frame-color-preview-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; opacity: 0; will-change: opacity; transition: opacity 0.12s ease; }
+            .frame-color-preview-img.active { opacity: 1; }
+            .frame-color-preview-fallback { position: absolute; inset: 0; display: block; background: inherit; }
             .frame-color-thumb-rail { min-width: 0; display: flex; flex-direction: column; gap: 0.42rem; max-height: 286px; overflow-x: hidden; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
-            .frame-color-thumb { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 3px 5px 3px 3px; display: flex; align-items: center; justify-content: flex-start; gap: 0.45rem; flex: 0 0 auto; background: #fff; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+            .frame-color-thumb { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 3px 5px 3px 3px; display: flex; align-items: center; justify-content: flex-start; gap: 0.45rem; flex: 0 0 auto; background: #fff; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06); transition: border-color 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease; }
             .frame-color-thumb .frame-swatch { width: 34px; height: 34px; border: none; border-radius: 5px; box-shadow: none; }
             .frame-color-thumb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-sans); font-size: 0.68rem; line-height: 1.2; color: var(--color-charcoal-mid); text-align: left; }
             .frame-color-thumb.active { border-color: var(--color-charcoal); box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08), 0 3px 10px rgba(17, 17, 17, 0.12); }
@@ -174,7 +177,8 @@ export function ArtworkPurchaseStyles() {
                 .step-trigger { font-size: 0.82rem; padding: 0.8rem 0.9rem; }
                 .step-option { font-size: 0.78rem; padding: 0.7rem 0.9rem; }
                 .frame-swatch { width: 2.1rem; height: 2.1rem; }
-                .step-options.frame-color-options.open { max-height: 330px; overflow-x: hidden; }
+                .step-options-inner { max-height: min(360px, calc(100vh - 110px)); }
+                .step-options.frame-color-options .step-options-inner { max-height: min(330px, calc(100vh - 120px)); overflow-x: hidden; }
                 .frame-color-panel { grid-template-columns: minmax(0, 1fr) 108px; gap: 0.6rem; padding: 0.65rem; }
                 .frame-color-preview, .frame-color-preview-img, .frame-color-preview-fallback { min-height: 190px; }
                 .frame-color-thumb-rail { max-height: 238px; gap: 0.38rem; padding-right: 0; scrollbar-width: none; }
