@@ -5,6 +5,7 @@ import { FormEvent, useState, useId, useEffect } from "react";
 import { Globe, CreditCard, MapPin } from "lucide-react";
 import { getApiUrl, apiFetch, apiJson } from "@/utils";
 import { settingText, type SiteSettings } from "@/lib/siteSettings";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 const InstagramLogo = ({ size = 24, color = "currentColor" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
     {" "}
@@ -179,8 +180,8 @@ export default function FooterClient({
                 {" "}
                 {settingText(settings?.footer_text_discover, FOOTER_DISCOVER_FALLBACK)}
               </p>{" "}
-              <Link href="/gallery" className="footer-col-link">
-                Explore Gallery
+              <Link href={PUBLIC_ROUTES.archive} className="footer-col-link">
+                Explore Archive
               </Link>{" "}
             </div>{" "}
           </div>{" "}

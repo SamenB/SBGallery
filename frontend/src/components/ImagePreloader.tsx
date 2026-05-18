@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { getApiUrl, getImageUrl, apiFetch, apiJson } from "@/utils";
+import { LEGACY_PUBLIC_ROUTES, PUBLIC_ROUTES } from "@/lib/publicRoutes";
 
 interface Artwork {
     id: number;
@@ -18,7 +19,11 @@ export default function ImagePreloader() {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (pathname === "/shop" || pathname?.startsWith("/artwork/")) {
+        if (
+            pathname === PUBLIC_ROUTES.originalsAndPrints ||
+            pathname === LEGACY_PUBLIC_ROUTES.shop ||
+            pathname?.startsWith("/artwork/")
+        ) {
             return;
         }
 

@@ -102,14 +102,14 @@ export function useGalleryPage() {
       .then((payload: ArtworkListResponse | Artwork[]) => {
         const rawData = readArtworks(payload);
         if (!rawData.length) {
-          setError("Unable to initialize gallery structure.");
+          setError("Unable to initialize archive structure.");
           return;
         }
         setAllArtworks(rawData.map(mapGalleryArtwork));
       })
       .catch((err: unknown) => {
-        console.error("Gallery data initialization failed:", err);
-        setError("Exhibition data temporarily unavailable.");
+        console.error("Archive data initialization failed:", err);
+        setError("Archive data temporarily unavailable.");
       })
       .finally(() => setLoading(false));
   }, []);

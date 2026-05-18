@@ -13,7 +13,7 @@ export function GalleryPageContent() {
   if (gallery.loading) {
     return (
       <div className="page-center-state">
-        Loading gallery...
+        Loading archive...
       </div>
     );
   }

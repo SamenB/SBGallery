@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { CartItem } from "@/context/CartContext";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 
 export function OrderSummary({
     items,
@@ -89,7 +90,7 @@ export function OrderSummary({
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(17,17,17,0.06)", paddingTop: "1rem" }}>
-                    <Link href="/shop" style={{ fontFamily: "var(--font-sans)", fontSize: "0.75rem", color: "#ec4899", textDecoration: "underline" }}>
+                    <Link href={PUBLIC_ROUTES.originalsAndPrints} style={{ fontFamily: "var(--font-sans)", fontSize: "0.75rem", color: "#ec4899", textDecoration: "underline" }}>
                         Continue Shopping
                     </Link>
                 </div>

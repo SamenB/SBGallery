@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { getImageUrl } from "@/utils";
+import { HOME_HERO_LINKS } from "@/lib/publicRoutes";
 import type { HomeSettings } from "./home.types";
-
-const HERO_LINKS = [
-  { href: "/shop", label: "Shop" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/about", label: "About the Artist" },
-];
 
 export function HomeHero({ settings }: { settings: HomeSettings }) {
   const backgroundUrl =
@@ -44,7 +39,7 @@ export function HomeHero({ settings }: { settings: HomeSettings }) {
 
       <div className="relative z-[2] flex h-full w-full flex-col items-center gap-[clamp(1.5rem,3vh,2.5rem)] px-8">
         <div className="animate-fade-up absolute left-1/2 bottom-[20%] flex -translate-x-1/2 flex-col items-center gap-4 whitespace-nowrap px-8 scale-[0.7] md:scale-[0.8] [animation-delay:0.5s] [animation-fill-mode:forwards]">
-          {HERO_LINKS.map((link) => (
+          {HOME_HERO_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}

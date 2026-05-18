@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePreferences } from "@/context/PreferencesContext";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 import { useProfileOrders } from "../hooks/useProfileOrders";
 import { ProfileOrderCard } from "./ProfileOrderCard";
 
@@ -41,7 +42,7 @@ export function ProfilePageContent() {
             <p className="mb-4 font-serif text-xl italic text-[rgba(26,26,24,0.4)]">
               No completed orders yet.
             </p>
-            <Link href="/shop" className="font-sans text-sm uppercase tracking-widest text-[rgba(26,26,24,0.5)] underline underline-offset-4 transition-colors hover:text-[var(--color-charcoal)]">
+            <Link href={PUBLIC_ROUTES.originalsAndPrints} className="font-sans text-sm uppercase tracking-widest text-[rgba(26,26,24,0.5)] underline underline-offset-4 transition-colors hover:text-[var(--color-charcoal)]">
               Browse Collection
             </Link>
           </div>

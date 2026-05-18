@@ -9,6 +9,7 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getApiUrl, artworkUrl, apiFetch } from "@/utils";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 
 /**
  * Handles incoming requests to legacy gallery slugs.
@@ -27,7 +28,7 @@ export default function GallerySlugRedirect() {
         // Extract the numeric ID from the hyphenated slug.
         const id = parseInt(slug.split("-")[0], 10);
         if (!id) { 
-            router.replace("/shop"); 
+            router.replace(PUBLIC_ROUTES.originalsAndPrints);
             return; 
         }
 

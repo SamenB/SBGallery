@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 
 function NavArrow({ direction }: { direction: "prev" | "next" }) {
   return (
@@ -111,7 +112,7 @@ export function ArtworkDetailNav({
         </NavLink>
         <Divider />
         <Link
-          href="/shop"
+          href={PUBLIC_ROUTES.originalsAndPrints}
           style={{
             display: "inline-flex",
             alignItems: "center",

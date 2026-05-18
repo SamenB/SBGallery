@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getImageUrl } from "@/utils";
 import RecentPaintingsGrid from "@/components/RecentPaintingsGrid";
 import { EMPTY_SITE_COPY, settingText } from "@/lib/siteSettings";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 import type { HomeArtwork, HomeSettings } from "./home.types";
 
 export function HomeSectionDivider() {
@@ -29,7 +30,7 @@ export function RecentPaintingsSection({
         <RecentPaintingsGrid works={featuredWorks} />
         <div className="mt-3 text-center md:mt-10 md:text-right">
           <Link
-            href="/shop"
+            href={PUBLIC_ROUTES.originalsAndPrints}
             className="inline-flex items-center gap-2 border-b border-[rgba(17,17,17,0.42)] pb-0.5 font-sans text-[0.82rem] font-medium uppercase tracking-[0.12em] text-[var(--color-charcoal)] no-underline transition-colors hover:text-[var(--color-charcoal-mid)]"
           >
             <span>View All Artworks</span>

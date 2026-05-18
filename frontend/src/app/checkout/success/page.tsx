@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getApiUrl, apiFetch } from "@/utils";
+import { PUBLIC_ROUTES } from "@/lib/publicRoutes";
 
 /**
  * Payment confirmation page shown after Monobank redirect.
@@ -279,8 +280,8 @@ function CheckoutSuccessContent() {
                         }}>
                             Order {displayOrderRef} — A confirmation email is on its way.
                         </p>
-                        <Link href="/gallery" className="luxury-btn">
-                            Return to Gallery
+                        <Link href={PUBLIC_ROUTES.archive} className="luxury-btn">
+                            Return to Archive
                         </Link>
                     </>
                 )}
@@ -353,8 +354,8 @@ function CheckoutSuccessContent() {
                             We couldn&apos;t retrieve the status of your order at this time.
                             If you made a payment, please check your email.
                         </p>
-                        <Link href="/gallery" className="outline-btn">
-                            Back to Gallery
+                        <Link href={PUBLIC_ROUTES.archive} className="outline-btn">
+                            Back to Archive
                         </Link>
                     </>
                 )}

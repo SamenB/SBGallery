@@ -7,6 +7,20 @@ const nextConfig: any = {
   experimental: {
     proxyClientMaxBodySize: "500mb",
   },
+  async redirects() {
+    return [
+      {
+        source: "/shop",
+        destination: "/originals-and-prints",
+        permanent: true,
+      },
+      {
+        source: "/gallery",
+        destination: "/archive",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
