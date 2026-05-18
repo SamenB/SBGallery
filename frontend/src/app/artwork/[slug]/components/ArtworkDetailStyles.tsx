@@ -16,13 +16,26 @@ export function ArtworkDetailStyles() {
           flex-direction: column;
           position: relative;
           height: auto;
+          min-width: 0;
+        }
+        .artwork-detail-shell {
+          width: 100%;
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 1.5rem 2rem 6rem;
+          box-sizing: border-box;
+        }
+        .artwork-detail-grid {
+          grid-template-columns: minmax(0, 1fr);
+          min-width: 0;
         }
         .artwork-img-area {
           flex: unset;
           position: relative;
-          width: calc(100% + 4rem);
-          margin-left: -2rem;
-          margin-top: 2rem;
+          width: min(calc(100vw - 16px), 720px);
+          margin-left: 50%;
+          margin-top: 1rem;
+          transform: translateX(-50%);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -34,9 +47,18 @@ export function ArtworkDetailStyles() {
           flex-direction: column;
           align-items: center;
           justify-content: flex-start;
+          position: relative;
           width: 100%;
+          min-width: 0;
         }
         @media (min-width: 768px) {
+          .artwork-detail-shell {
+            max-width: min(1360px, 100%);
+          }
+          .artwork-detail-grid {
+            grid-template-columns: minmax(0, 1.18fr) minmax(390px, 0.82fr);
+            gap: 2.5rem !important;
+          }
           .artwork-img-col {
             top: 10px;
             height: calc(100vh - 40px);
@@ -48,11 +70,12 @@ export function ArtworkDetailStyles() {
             margin-right: 0;
             margin-top: -1rem;
             width: 100%;
+            transform: none;
             height: calc(100% + 1rem);
             align-items: flex-start;
             flex: 1;
           }
-          .artwork-slider-wrap { height: calc(100% - 130px); }
+          .artwork-slider-wrap { min-height: 520px; }
         }
         .mobile-title-row { display: flex; }
         .desktop-title-row { display: none; }

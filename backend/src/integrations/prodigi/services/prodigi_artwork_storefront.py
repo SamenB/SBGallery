@@ -33,7 +33,6 @@ CATEGORY_MEDIUM_MAP = {
     "paperPrintClassicFramed": "paper",
     "canvasRolled": "canvas",
     "canvasStretched": "canvas",
-    "canvasClassicFrame": "canvas",
     "canvasFloatingFrame": "canvas",
 }
 
@@ -256,6 +255,18 @@ class ProdigiArtworkStorefrontService:
             else None
         )
 
+        resolved_fixed, resolved_defaults, resolved_allowed = resolve_profile_attribute_config(
+            fixed_attributes=cell.get("fixed_attributes") or {},
+            recommended_defaults=cell.get("recommended_defaults") or {},
+            allowed_attributes=cell.get("allowed_attributes") or {},
+            effective_profile=effective_profile,
+        )
+        default_attributes = self._build_default_attributes(
+            fixed_attributes=resolved_fixed,
+            recommended_defaults=resolved_defaults,
+            allowed_attributes=resolved_allowed,
+        )
+
         for size_entry in cell.get("size_entries", []):
             if not size_entry.get("available"):
                 continue
@@ -276,6 +287,10 @@ class ProdigiArtworkStorefrontService:
             shipping_mode = business_policy.get("shipping_mode")
             if shipping_mode == "hide":
                 continue
+            size_allowed_attributes = self._resolve_size_allowed_attributes(
+                size_entry.get("allowed_attribute_options") or {},
+                resolved_allowed,
+            )
 
             retail_product_price = business_policy.get("retail_product_price")
             customer_shipping_price = business_policy.get("customer_shipping_price")
@@ -295,6 +310,7 @@ class ProdigiArtworkStorefrontService:
                     "supplier_size_inches": size_entry.get("supplier_size_inches"),
                     "print_area": size_entry.get("print_area"),
                     "provider_attributes": size_entry.get("provider_attributes") or {},
+                    "allowed_attribute_options": size_allowed_attributes,
                     "source_country": size_entry.get("source_country"),
                     "currency": size_entry.get("currency"),
                     "delivery_days": size_entry.get("delivery_days"),
@@ -326,18 +342,6 @@ class ProdigiArtworkStorefrontService:
         if not size_options:
             return None
 
-        resolved_fixed, resolved_defaults, resolved_allowed = resolve_profile_attribute_config(
-            fixed_attributes=cell.get("fixed_attributes") or {},
-            recommended_defaults=cell.get("recommended_defaults") or {},
-            allowed_attributes=cell.get("allowed_attributes") or {},
-            effective_profile=effective_profile,
-        )
-        default_attributes = self._build_default_attributes(
-            fixed_attributes=resolved_fixed,
-            recommended_defaults=resolved_defaults,
-            allowed_attributes=resolved_allowed,
-        )
-
         return {
             "category_id": category_id,
             "label": category_meta["label"],
@@ -366,6 +370,24 @@ class ProdigiArtworkStorefrontService:
             "print_profile": effective_profile or {},
             "size_options": size_options,
         }
+
+    def _resolve_size_allowed_attributes(
+        self,
+        size_allowed: dict[str, list[Any]],
+        card_allowed: dict[str, list[Any]],
+    ) -> dict[str, list[Any]]:
+        if not size_allowed:
+            return {key: list(values) for key, values in card_allowed.items()}
+
+        resolved: dict[str, list[Any]] = {}
+        for key, card_values in card_allowed.items():
+            size_values = size_allowed.get(key)
+            if size_values is None:
+                resolved[key] = list(card_values)
+                continue
+            size_value_lookup = {str(value) for value in size_values}
+            resolved[key] = [value for value in card_values if str(value) in size_value_lookup]
+        return {key: values for key, values in resolved.items() if values}
 
     def _build_customer_total_price(
         self,

@@ -150,8 +150,6 @@ def _is_relevant_for_artshop(
         return False
     if medium == "canvas" and presentation == "rolled":
         return True
-    if medium == "canvas" and frame_type == "classic_frame":
-        return True
     if medium == "canvas" and presentation == "stretched":
         return "19mm" not in description_lower and "SLIMCAN" not in sku_upper
     if medium == "canvas" and frame_type == "floating_frame":

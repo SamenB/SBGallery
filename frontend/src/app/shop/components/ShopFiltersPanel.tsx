@@ -9,7 +9,6 @@ import { PriceRangeSection } from "./PriceRangeSection";
 import { SidebarSection } from "./SidebarSection";
 
 type ShopFiltersPanelProps = {
-  userPresent: boolean;
   isMobile: boolean;
   filterLiked: boolean;
   setFilterLiked: (value: boolean) => void;
@@ -50,7 +49,6 @@ const toggleNum = (setter: Dispatch<SetStateAction<number[]>>, val: number) =>
   setter((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
 
 export function ShopFiltersPanel({
-  userPresent,
   isMobile,
   filterLiked,
   setFilterLiked,
@@ -85,11 +83,9 @@ export function ShopFiltersPanel({
 }: ShopFiltersPanelProps) {
   return (
     <>
-      {userPresent && (
-        <SidebarSection title="My Collection" defaultOpen={true} isMobile={isMobile}>
-          <FilterCheckbox label="My Likes" active={filterLiked} onClick={() => setFilterLiked(!filterLiked)} isMobile={isMobile} />
-        </SidebarSection>
-      )}
+      <SidebarSection title="My Collection" defaultOpen={true} isMobile={isMobile}>
+        <FilterCheckbox label="My Likes" active={filterLiked} onClick={() => setFilterLiked(!filterLiked)} isMobile={isMobile} />
+      </SidebarSection>
 
       <SidebarSection title="Category" defaultOpen={false} isMobile={isMobile}>
         <FilterCheckbox label="Available Originals" active={categoryFilter.includes("originals")} onClick={() => toggleStr(setCategoryFilter, "originals")} isMobile={isMobile} />

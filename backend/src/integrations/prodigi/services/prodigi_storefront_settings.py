@@ -8,7 +8,10 @@ from sqlalchemy import func, select
 from src.integrations.prodigi.services.prodigi_business_policy import (
     ProdigiBusinessPolicyService,
 )
-from src.integrations.prodigi.services.prodigi_storefront_policy import STOREFRONT_POLICY
+from src.integrations.prodigi.services.prodigi_storefront_policy import (
+    RETIRED_STOREFRONT_CATEGORY_IDS,
+    STOREFRONT_POLICY,
+)
 from src.models.prodigi_storefront import (
     ProdigiArtworkStorefrontPayloadOrm,
     ProdigiStorefrontBakeOrm,
@@ -213,7 +216,11 @@ class ProdigiStorefrontSettingsService:
     @classmethod
     def _validate_category_policy(cls, value: dict[str, Any]) -> dict[str, Any]:
         defaults = deepcopy(STOREFRONT_POLICY)
-        provided = dict(value)
+        provided = {
+            category_id: policy
+            for category_id, policy in dict(value).items()
+            if category_id not in RETIRED_STOREFRONT_CATEGORY_IDS
+        }
         unknown_categories = sorted(set(provided) - set(defaults))
         if unknown_categories:
             raise ValueError(f"Unknown category id(s): {', '.join(unknown_categories)}.")

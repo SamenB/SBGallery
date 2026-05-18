@@ -30,7 +30,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   paperPrintClassicFramed: "Paper Classic Framed",
   canvasRolled: "Canvas Rolled",
   canvasStretched: "Canvas Stretched",
-  canvasClassicFrame: "Canvas Classic Frame",
   canvasFloatingFrame: "Canvas Floating Frame",
 };
 const CATEGORY_GROUP: Record<string, "paper" | "canvas"> = {
@@ -39,7 +38,6 @@ const CATEGORY_GROUP: Record<string, "paper" | "canvas"> = {
   paperPrintClassicFramed: "paper",
   canvasRolled: "canvas",
   canvasStretched: "canvas",
-  canvasClassicFrame: "canvas",
   canvasFloatingFrame: "canvas",
 };
 const REGION_META: Record<string, { tone: string; note: string }> = {

@@ -149,6 +149,10 @@ class ProdigiCatalogSnapshotBaker:
                         storefront_preview,
                         print_area_resolver,
                     )
+                    await self.bake_service._apply_provider_attribute_options(
+                        storefront_preview,
+                        print_area_resolver,
+                    )
                     self.bake_service._assert_provider_print_area_sizes(storefront_preview)
 
                     if not storefront_preview["visible_cards"]:
@@ -249,6 +253,7 @@ class ProdigiCatalogSnapshotBaker:
                 print_area_name=size.get("print_area_name"),
                 print_area_source=size.get("print_area_source"),
                 print_area_dimensions=size.get("print_area_dimensions"),
+                allowed_attributes=size.get("allowed_attribute_options"),
                 source_country=size["source_country"],
                 currency=size["currency"],
                 product_price=size["product_price"],

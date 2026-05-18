@@ -130,13 +130,29 @@ export function ArtworkPurchaseStyles() {
             .step-text { font-family: var(--font-sans); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-muted); line-height: 1; transform: translateY(1px); }
             .step-select-wrap { position: relative; padding-left: 10px; }
             .step-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.9rem 1.1rem; font-family: var(--font-sans); font-size: 0.85rem; font-weight: 400; color: var(--color-charcoal); background: #fff; border: 1.5px solid var(--color-border-dark); border-radius: 10px; cursor: pointer; outline: none; text-align: left; transition: border-color 0.25s ease, box-shadow 0.25s ease, border-radius 0.2s ease; -webkit-tap-highlight-color: transparent; }
+            .step-trigger-content, .step-option-main { display: inline-flex; align-items: center; gap: 0.65rem; min-width: 0; }
             .step-trigger.open { border-color: var(--color-charcoal); box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06); border-radius: 10px 10px 0 0; border-bottom-color: var(--color-border); }
             @media (hover: hover) and (pointer: fine) { .step-trigger:hover:not(.open) { border-color: rgba(17, 17, 17, 0.35); } }
             .step-chevron { width: 10px; height: 10px; border-right: 1.5px solid var(--color-muted); border-bottom: 1.5px solid var(--color-muted); transform: rotate(45deg); transition: transform 0.25s ease, border-color 0.2s ease; flex-shrink: 0; margin-left: 0.75rem; }
             .step-trigger.open .step-chevron { transform: rotate(-135deg); border-color: var(--color-charcoal); }
             .step-options { overflow: hidden; max-height: 0; opacity: 0; border: 1.5px solid transparent; border-top: none; border-radius: 0 0 10px 10px; background: #fff; transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease, border-color 0.2s ease; }
             .step-options.open { max-height: 400px; opacity: 1; border-color: var(--color-charcoal); }
+            .step-options.frame-color-options.open { max-height: 390px; }
             .step-option { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0.75rem 1.1rem; font-family: var(--font-sans); font-size: 0.82rem; font-weight: 400; color: var(--color-charcoal-mid); background: transparent; border: none; border-top: 1px solid var(--color-border); cursor: pointer; text-align: left; transition: background 0.15s ease, color 0.15s ease; -webkit-tap-highlight-color: transparent; }
+            .frame-swatch { width: 2.4rem; height: 2.4rem; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 7px; box-shadow: 0 1px 2px rgba(17, 17, 17, 0.08); }
+            .frame-swatch-img { width: 100%; height: 100%; object-fit: contain; background: #fff; display: block; }
+            .frame-swatch-fallback { width: 100%; height: 100%; display: block; background: inherit; }
+            .frame-color-panel { box-sizing: border-box; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 0.75rem; padding: 0.9rem; border-top: 1px solid var(--color-border); overflow: hidden; }
+            .frame-color-preview-wrap { min-width: 0; }
+            .frame-color-preview { width: 100%; min-height: 236px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fff; }
+            .frame-color-preview-img { width: 100%; height: 100%; min-height: 236px; object-fit: contain; display: block; background: #fff; }
+            .frame-color-preview-fallback { width: 100%; min-height: 236px; display: block; background: inherit; }
+            .frame-color-thumb-rail { min-width: 0; display: flex; flex-direction: column; gap: 0.42rem; max-height: 286px; overflow-x: hidden; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
+            .frame-color-thumb { box-sizing: border-box; width: 100%; min-width: 0; min-height: 40px; padding: 3px 5px 3px 3px; display: flex; align-items: center; justify-content: flex-start; gap: 0.45rem; flex: 0 0 auto; background: #fff; border: 1px solid rgba(17, 17, 17, 0.12); border-radius: 8px; cursor: pointer; box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06); transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; }
+            .frame-color-thumb .frame-swatch { width: 34px; height: 34px; border: none; border-radius: 5px; box-shadow: none; }
+            .frame-color-thumb-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-sans); font-size: 0.68rem; line-height: 1.2; color: var(--color-charcoal-mid); text-align: left; }
+            .frame-color-thumb.active { border-color: var(--color-charcoal); box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08), 0 3px 10px rgba(17, 17, 17, 0.12); }
+            .frame-color-thumb.active .frame-color-thumb-label { color: var(--color-charcoal); font-weight: 600; }
             .step-option:first-child { border-top: none; }
             .step-option:last-child { border-radius: 0 0 8px 8px; }
             .step-option.active { color: var(--color-charcoal); font-weight: 500; background: rgba(17, 17, 17, 0.03); }
@@ -157,6 +173,15 @@ export function ArtworkPurchaseStyles() {
                 .step-select-wrap { padding-left: 6px; }
                 .step-trigger { font-size: 0.82rem; padding: 0.8rem 0.9rem; }
                 .step-option { font-size: 0.78rem; padding: 0.7rem 0.9rem; }
+                .frame-swatch { width: 2.1rem; height: 2.1rem; }
+                .step-options.frame-color-options.open { max-height: 330px; overflow-x: hidden; }
+                .frame-color-panel { grid-template-columns: minmax(0, 1fr) 108px; gap: 0.6rem; padding: 0.65rem; }
+                .frame-color-preview, .frame-color-preview-img, .frame-color-preview-fallback { min-height: 190px; }
+                .frame-color-thumb-rail { max-height: 238px; gap: 0.38rem; padding-right: 0; scrollbar-width: none; }
+                .frame-color-thumb-rail::-webkit-scrollbar { width: 0; height: 0; display: none; }
+                .frame-color-thumb { min-height: 36px; border-radius: 7px; gap: 0.35rem; }
+                .frame-color-thumb .frame-swatch { width: 30px; height: 30px; }
+                .frame-color-thumb-label { font-size: 0.62rem; }
                 .pc-title { font-size: 1.05rem; }
                 .info-badge { padding: 0.75rem 0.85rem; }
             }

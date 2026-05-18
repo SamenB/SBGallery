@@ -26,7 +26,7 @@ export function ArtworkDetailPageContent() {
   return (
     <div className="w-full relative" style={{ maxWidth: "100%", overflowX: "clip" }}>
       <ArtworkDetailStyles />
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "1.5rem 2rem 6rem" }}>
+      <div className="artwork-detail-shell">
         {page.images.length > 0 && (
           <link
             rel="preload"
@@ -46,11 +46,7 @@ export function ArtworkDetailPageContent() {
           onToggleLike={page.toggleLike}
         />
         <div
-          className={`grid grid-cols-1 items-start gap-12 lg:gap-16 ${
-            page.work.orientation === "horizontal"
-              ? "md:grid-cols-2"
-              : "md:grid-cols-[1.25fr_1fr]"
-          }`}
+          className="artwork-detail-grid grid grid-cols-1 items-start gap-12 lg:gap-16"
         >
           <ArtworkImageGallery
             work={page.work}

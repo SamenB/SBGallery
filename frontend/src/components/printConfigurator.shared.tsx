@@ -15,6 +15,7 @@ import {
   resolveStorefrontProductPrice,
   resolveStorefrontShippingPrice,
 } from "@/lib/artworkStorefront";
+import { filterFrameColorOptionsForSwatches } from "@/lib/prodigiPrintOptions";
 
 type CartEditionType = "canvas_print" | "canvas_print_limited" | "paper_print" | "paper_print_limited";
 interface PrintConfiguratorProps {
@@ -116,19 +117,59 @@ function buildImageWindowLabel(
   }
   return formatInches(widthIn, heightIn, units);
 }
-function buildInitialAttributeSelection(card: StorefrontCard | null): Record<string, string> {
+function resolveAllowedAttributeOptions(
+  card: StorefrontCard | null,
+  size?: StorefrontSizeOption | null,
+): Record<string, string[]> {
+  const source =
+    size?.allowed_attribute_options && Object.keys(size.allowed_attribute_options).length > 0
+      ? size.allowed_attribute_options
+      : card?.allowed_attribute_options || {};
+  const resolved: Record<string, string[]> = {};
+  for (const [key, options] of Object.entries(source)) {
+    resolved[key] = filterFrameColorOptionsForSwatches(card, key, options);
+  }
+  return resolved;
+}
+function buildInitialAttributeSelection(
+  card: StorefrontCard | null,
+  size?: StorefrontSizeOption | null,
+): Record<string, string> {
   if (!card) {
     return {};
   }
 
   const initial: Record<string, string> = {};
-  for (const [key, options] of Object.entries(card.allowed_attribute_options || {})) {
+  const allowedOptions = resolveAllowedAttributeOptions(card, size);
+  const defaults = {
+    ...(card.default_prodigi_attributes || {}),
+    ...(size?.provider_attributes || {}),
+  };
+  for (const [key, options] of Object.entries(allowedOptions)) {
     if (!options.length) {
       continue;
     }
-    initial[key] = card.default_prodigi_attributes[key] || options[0];
+    const defaultValue = defaults[key];
+    initial[key] = defaultValue && options.includes(defaultValue) ? defaultValue : options[0];
   }
   return initial;
+}
+function normalizeAttributeSelection(
+  card: StorefrontCard | null,
+  size: StorefrontSizeOption | null,
+  current: Record<string, string>,
+): Record<string, string> {
+  const allowedOptions = resolveAllowedAttributeOptions(card, size);
+  const defaults = buildInitialAttributeSelection(card, size);
+  const normalized: Record<string, string> = {};
+  for (const [key, options] of Object.entries(allowedOptions)) {
+    if (!options.length) {
+      continue;
+    }
+    const currentValue = current[key];
+    normalized[key] = currentValue && options.includes(currentValue) ? currentValue : defaults[key];
+  }
+  return normalized;
 }
 function resolveEditionType(medium: PurchaseType, offers: MediumOffers | null): CartEditionType {
   if (medium === "canvas") {
@@ -294,7 +335,9 @@ export {
   isMountedFrame,
   isUkShippedBoxFrame,
   buildImageWindowLabel,
+  resolveAllowedAttributeOptions,
   buildInitialAttributeSelection,
+  normalizeAttributeSelection,
   resolveEditionType,
   buildFinishLabel,
   buildRouteSummary,

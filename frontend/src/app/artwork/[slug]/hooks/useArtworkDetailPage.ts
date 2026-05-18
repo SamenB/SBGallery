@@ -19,6 +19,7 @@ import {
   detectDeliveryCountry,
   storeDeliveryCountry,
 } from "@/lib/deliveryCountry";
+import { hasVisibleStorefrontCards } from "@/lib/prodigiPrintOptions";
 import { apiFetch, getApiUrl } from "@/utils";
 import { DEFAULT_GRADIENTS } from "../constants";
 import type { Artwork } from "../types";
@@ -30,6 +31,7 @@ export interface ArtworkLayoutMetrics {
   boxH: number;
   imgH: number;
   winW: number;
+  winH: number;
 }
 
 interface ArtworkResponse {
@@ -77,6 +79,7 @@ export function useArtworkDetailPage() {
     boxH: 0,
     imgH: 0,
     winW: 0,
+    winH: 0,
   });
   const [imageAspectRatios, setImageAspectRatios] = useState<
     Record<number, number>
@@ -98,11 +101,16 @@ export function useArtworkDetailPage() {
     const boxNode = boxRef.current;
     if (!boxNode) return;
     const imgNode = imageFrameRef.current[selectedImageIndex];
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    const boxTop = boxNode.getBoundingClientRect().top;
+    const desktopBoxH = Math.max(520, winH - boxTop - 34);
     setLayoutMetrics({
       boxW: boxNode.clientWidth,
-      boxH: boxNode.clientHeight,
+      boxH: winW < 768 ? boxNode.clientHeight : desktopBoxH,
       imgH: imgNode ? imgNode.clientHeight : 0,
-      winW: window.innerWidth,
+      winW,
+      winH,
     });
   }, [selectedImageIndex]);
 
@@ -293,10 +301,10 @@ export function useArtworkDetailPage() {
   const storefrontLoading =
     !embeddedStorefront && storefrontState?.requestKey !== storefrontRequestKey;
   const hasCanvasOffers = storefront
-    ? Boolean(storefront.mediums?.canvas?.cards?.length)
+    ? hasVisibleStorefrontCards(storefront.mediums?.canvas?.cards)
     : Boolean(work?.has_canvas_print || work?.has_canvas_print_limited);
   const hasPaperOffers = storefront
-    ? Boolean(storefront.mediums?.paper?.cards?.length)
+    ? hasVisibleStorefrontCards(storefront.mediums?.paper?.cards)
     : Boolean(work?.has_paper_print || work?.has_paper_print_limited);
   const defaultPurchaseType: PurchaseType =
     work?.original_status === "available"

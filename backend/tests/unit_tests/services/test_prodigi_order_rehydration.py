@@ -172,6 +172,53 @@ def test_customer_total_mismatch_blocks_selection():
         )
 
 
+def test_size_level_attribute_options_block_unsupported_client_color():
+    read_model = ProdigiStorefrontReadModelService(SimpleNamespace(session=None))
+    payload = {
+        "storefront_policy_version": ProdigiBusinessPolicyService.POLICY_VERSION,
+        "mediums": {
+            "canvas": {
+                "cards": [
+                    {
+                        "category_id": "canvasFloatingFrame",
+                        "default_prodigi_attributes": {"wrap": "MirrorWrap", "color": "black"},
+                        "allowed_attribute_options": {
+                            "color": ["black", "white", "natural", "brown", "gold", "silver"]
+                        },
+                        "size_options": [
+                            {
+                                "id": 42,
+                                "sku": "GLOBAL-FRA-CAN-14X14",
+                                "slot_size_label": "35x35",
+                                "size_label": "35 x 35 cm",
+                                "allowed_attribute_options": {"color": ["black", "white", "brown"]},
+                                "provider_attributes": {"wrap": "MirrorWrap", "color": "black"},
+                                "retail_product_price": 30.0,
+                                "customer_shipping_price": 10.0,
+                                "customer_total_price": 40.0,
+                                "business_policy": {"shipping_mode": "pass_through"},
+                                "shipping_support": {"status": "covered"},
+                            }
+                        ],
+                    }
+                ]
+            }
+        },
+    }
+
+    with pytest.raises(ValueError, match="color=gold"):
+        read_model.resolve_print_selection(
+            payload=payload,
+            item_data=SimpleNamespace(
+                prodigi_storefront_offer_size_id=42,
+                prodigi_category_id="canvasFloatingFrame",
+                prodigi_slot_size_label="35x35",
+                prodigi_sku="GLOBAL-FRA-CAN-14X14",
+                prodigi_attributes={"color": "gold"},
+            ),
+        )
+
+
 def test_missing_offer_size_id_blocks_checkout_rehydration():
     with pytest.raises(ProdigiOrderRehydrationError, match="offer size id"):
         import asyncio

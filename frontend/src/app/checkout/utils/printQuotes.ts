@@ -5,24 +5,50 @@ import {
   resolveStorefrontCustomerTotal,
   resolveStorefrontProductPrice,
   resolveStorefrontShippingPrice,
+  type StorefrontCard,
   type StorefrontSizeOption,
 } from "@/lib/artworkStorefront";
 import type { PrintQuoteState } from "../types";
 
 type ArtworkStorefront = Awaited<ReturnType<typeof loadArtworkStorefront>>;
+type MatchingPrintSelection = {
+  card: StorefrontCard;
+  size: StorefrontSizeOption;
+};
 
-function findMatchingPrintSize(item: CartItem, storefront: ArtworkStorefront): StorefrontSizeOption | null {
+function findMatchingPrintSelection(item: CartItem, storefront: ArtworkStorefront): MatchingPrintSelection | null {
   const cards = [...(storefront.mediums.paper?.cards || []), ...(storefront.mediums.canvas?.cards || [])];
   const card = cards.find((candidate) => candidate.category_id === item.prodigi_category_id);
   if (!card) return null;
 
-  return (
+  const size =
     card.size_options.find((size) => {
       const slotMatch = Boolean(item.prodigi_slot_size_label) && (size.slot_size_label === item.prodigi_slot_size_label || size.size_label === item.prodigi_slot_size_label);
       const displayMatch = Boolean(item.size) && size.size_label === item.size;
       return slotMatch || displayMatch;
-    }) || null
-  );
+    }) || null;
+
+  return size ? { card, size } : null;
+}
+
+function resolveAllowedAttributes(card: StorefrontCard, size: StorefrontSizeOption): Record<string, string[]> {
+  if (size.allowed_attribute_options && Object.keys(size.allowed_attribute_options).length > 0) {
+    return size.allowed_attribute_options;
+  }
+  return card.allowed_attribute_options || {};
+}
+
+function validatePrintAttributes(item: CartItem, card: StorefrontCard, size: StorefrontSizeOption): boolean {
+  const allowed = resolveAllowedAttributes(card, size);
+  for (const [key, value] of Object.entries(item.prodigi_attributes || {})) {
+    if (value === null || value === undefined || value === "" || !(key in allowed)) {
+      continue;
+    }
+    if (!allowed[key].map(String).includes(String(value))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export async function resolvePrintQuoteForCountry(item: CartItem, countryCode: string): Promise<[string, PrintQuoteState]> {
@@ -36,7 +62,8 @@ export async function resolvePrintQuoteForCountry(item: CartItem, countryCode: s
       return [item.id, { status: "unavailable", message: `Sorry, this print is not available for delivery to ${countryCode}.` }];
     }
 
-    const size = findMatchingPrintSize(item, storefront);
+    const selection = findMatchingPrintSelection(item, storefront);
+    const size = selection?.size || null;
     const productPrice = size ? resolveStorefrontProductPrice(size) : null;
     const shippingPrice = size ? resolveStorefrontShippingPrice(size) : null;
     const totalPrice = size ? resolveStorefrontCustomerTotal(size) : null;
@@ -44,6 +71,10 @@ export async function resolvePrintQuoteForCountry(item: CartItem, countryCode: s
 
     if (!size || productPrice === null || shippingPrice === null || totalPrice === null || roundedPriceParts === null) {
       return [item.id, { status: "unavailable", message: "This selected print format is not available for the new delivery country." }];
+    }
+
+    if (!selection || !validatePrintAttributes(item, selection.card, selection.size)) {
+      return [item.id, { status: "unavailable", message: "This selected print color is not available for the new delivery country." }];
     }
 
     return [

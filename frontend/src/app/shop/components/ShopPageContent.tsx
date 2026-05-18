@@ -255,7 +255,6 @@ export function ShopPageContent() {
 
   const filtersPanel = (
     <ShopFiltersPanel
-      userPresent={Boolean(user)}
       isMobile={isMobile}
       filterLiked={filters.filterLiked}
       setFilterLiked={filterActions.setFilterLiked}

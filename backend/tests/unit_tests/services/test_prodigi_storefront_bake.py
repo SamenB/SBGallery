@@ -279,9 +279,17 @@ def test_bake_keeps_provider_sizes_when_visible_art_ratio_matches_even_if_print_
 def test_bake_requires_exact_canvas_wrap_provider_variant() -> None:
     service = ProdigiStorefrontBakeService(SimpleNamespace(session=None))
 
-    assert service._optional_provider_attribute_keys("canvasStretched") == set()
-    assert service._optional_provider_attribute_keys("canvasClassicFrame") == set()
-    assert service._optional_provider_attribute_keys("canvasFloatingFrame") == set()
+    assert (
+        service._optional_provider_attribute_keys(
+            category_id="canvasStretched",
+            allowed_attributes={},
+        )
+        == set()
+    )
+    assert service._optional_provider_attribute_keys(
+        category_id="canvasFloatingFrame",
+        allowed_attributes={"color": ["black", "white"]},
+    ) == {"color"}
 
 
 @pytest.mark.asyncio
@@ -331,3 +339,64 @@ async def test_bake_filters_canvas_sizes_without_full_wrap_support() -> None:
     kept_sizes = preview["visible_cards"][0]["size_options"]
     assert [item["slot_size_label"] for item in kept_sizes] == ["40x50"]
     assert preview["removed_size_options"][0]["reason"] == "missing_required_canvas_wraps"
+
+
+@pytest.mark.asyncio
+async def test_bake_derives_size_level_provider_attribute_options() -> None:
+    service = ProdigiStorefrontBakeService(SimpleNamespace(session=None))
+    preview = {
+        "country_code": "CA",
+        "ratio": "4:5",
+        "visible_cards": [
+            {
+                "category_id": "canvasFloatingFrame",
+                "label": "Floating framed canvas",
+                "storefront_action": "show",
+                "fulfillment_level": "direct",
+                "geography_scope": "global",
+                "tax_risk": "normal",
+                "storefront_policy": {
+                    "fixed_attributes": {},
+                    "recommended_defaults": {"wrap": "MirrorWrap"},
+                    "allowed_attributes": {
+                        "color": ["black", "white", "brown"],
+                    },
+                },
+                "size_options": [
+                    {
+                        "slot_size_label": "20x25",
+                        "size_label": "20x25",
+                        "sku": "SKU-SIX",
+                        "currency": "EUR",
+                        "total_cost": 120.0,
+                    },
+                    {
+                        "slot_size_label": "35x35",
+                        "size_label": "35x35",
+                        "sku": "SKU-THREE",
+                        "currency": "EUR",
+                        "total_cost": 150.0,
+                    },
+                ],
+            }
+        ],
+        "hidden_cards": [],
+        "removed_size_options": [],
+    }
+
+    class FakeResolver:
+        async def get_available_attribute_values(self, *, sku, destination_country, attribute_key):
+            if sku == "SKU-SIX":
+                return {"black", "white", "natural", "brown", "gold", "silver"}
+            return {"black", "white", "brown"}
+
+    await service._apply_provider_attribute_options(preview, FakeResolver())
+
+    sizes = preview["visible_cards"][0]["size_options"]
+    assert sizes[0]["allowed_attribute_options"]["color"] == ["black", "white", "brown"]
+    assert sizes[1]["allowed_attribute_options"]["color"] == ["black", "white", "brown"]
+    assert preview["visible_cards"][0]["storefront_policy"]["allowed_attributes"]["color"] == [
+        "black",
+        "white",
+        "brown",
+    ]

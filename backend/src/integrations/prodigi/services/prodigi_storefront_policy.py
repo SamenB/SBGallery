@@ -4,6 +4,8 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Any
 
+RETIRED_STOREFRONT_CATEGORY_IDS = {"canvasClassicFrame"}
+
 STOREFRONT_POLICY: dict[str, dict[str, Any]] = {
     "paperPrintRolled": {
         "label": "Paper Print Unframed",
@@ -47,7 +49,7 @@ STOREFRONT_POLICY: dict[str, dict[str, Any]] = {
             "mount": "No mount / Mat",
         },
         "allowed_attributes": {
-            "color": ["black", "white", "natural", "brown", "antique gold", "antique silver"],
+            "color": ["black", "white", "natural", "brown", "gold", "silver"],
         },
         "recommended_defaults": {},
         "shipping": {
@@ -91,8 +93,8 @@ STOREFRONT_POLICY: dict[str, dict[str, Any]] = {
             "19mm and metallic canvas were already removed upstream.",
         ],
     },
-    "canvasClassicFrame": {
-        "label": "Canvas Classic Frame",
+    "canvasFloatingFrame": {
+        "label": "Canvas Floating Frame",
         "fixed_attributes": {},
         "allowed_attributes": {
             "color": ["black", "white", "brown"],
@@ -106,28 +108,8 @@ STOREFRONT_POLICY: dict[str, dict[str, Any]] = {
             "default_method": "Express",
         },
         "notes": [
-            "Classic frame is kept separate from stretched canvas.",
             "Wrap is not customer-facing; Prodigi generates MirrorWrap from the clean front image.",
-            "Secondary colors are hidden because their geographic coverage is weaker.",
-        ],
-    },
-    "canvasFloatingFrame": {
-        "label": "Canvas Floating Frame",
-        "fixed_attributes": {},
-        "allowed_attributes": {
-            "color": ["black", "white", "natural", "brown", "gold", "silver"],
-        },
-        "recommended_defaults": {
-            "wrap": "MirrorWrap",
-        },
-        "shipping": {
-            "visible_methods": ["Express", "Standard"],
-            "preferred_order": ["Express", "Standard"],
-            "default_method": "Express",
-        },
-        "notes": [
-            "Wrap is not customer-facing; Prodigi generates MirrorWrap from the clean front image.",
-            "All six floating-frame colors stay visible because coverage is consistently strong.",
+            "Only floating-frame colors with real ArtShop image swatches are visible.",
         ],
     },
 }

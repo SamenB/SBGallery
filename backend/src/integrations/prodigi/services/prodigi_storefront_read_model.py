@@ -291,7 +291,7 @@ class ProdigiStorefrontReadModelService:
         size: dict[str, Any],
         client_attrs: dict[str, Any],
     ) -> dict[str, Any]:
-        allowed = card.get("allowed_attribute_options") or {}
+        allowed = self._resolve_allowed_attributes_for_size(card=card, size=size)
         defaults: dict[str, Any] = {}
         defaults.update(card.get("default_prodigi_attributes") or {})
         defaults.update(size.get("provider_attributes") or {})
@@ -307,6 +307,18 @@ class ProdigiStorefrontReadModelService:
                 )
             resolved[key] = value
         return normalize_prodigi_attributes(resolved)
+
+    def _resolve_allowed_attributes_for_size(
+        self,
+        *,
+        card: dict[str, Any],
+        size: dict[str, Any],
+    ) -> dict[str, list[Any]]:
+        size_allowed = size.get("allowed_attribute_options")
+        if isinstance(size_allowed, dict) and size_allowed:
+            return {key: list(values or []) for key, values in size_allowed.items()}
+        card_allowed = card.get("allowed_attribute_options") or {}
+        return {key: list(values or []) for key, values in card_allowed.items()}
 
     def _is_customer_available_size(self, size: dict[str, Any]) -> bool:
         if size.get("customer_total_price") is None:

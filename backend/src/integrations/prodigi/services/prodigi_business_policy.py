@@ -20,7 +20,7 @@ class ProdigiBusinessPolicyService:
     - keep original-art shipping policy separate from print-on-demand pricing.
     """
 
-    POLICY_VERSION = "print_shipping_passthrough_v1"
+    POLICY_VERSION = "print_shipping_passthrough_v3_floating_swatches"
 
     CATEGORY_MARKUP_MULTIPLIERS: dict[str, float] = {
         "paperPrintRolled": 3.0,
@@ -28,7 +28,6 @@ class ProdigiBusinessPolicyService:
         "paperPrintClassicFramed": 2.7,
         "canvasRolled": 3.5,
         "canvasStretched": 3.2,
-        "canvasClassicFrame": 3.1,
         "canvasFloatingFrame": 2.9,
     }
 
@@ -38,7 +37,6 @@ class ProdigiBusinessPolicyService:
         "paperPrintClassicFramed": "Paper Print Classic Framed",
         "canvasRolled": "Canvas Rolled",
         "canvasStretched": "Canvas Stretched",
-        "canvasClassicFrame": "Canvas Classic Frame",
         "canvasFloatingFrame": "Canvas Floating Frame",
     }
 
@@ -48,7 +46,6 @@ class ProdigiBusinessPolicyService:
         "paperPrintBoxFramed",
         "paperPrintClassicFramed",
         "canvasStretched",
-        "canvasClassicFrame",
         "canvasFloatingFrame",
     }
 

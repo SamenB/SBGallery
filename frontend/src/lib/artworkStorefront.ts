@@ -58,6 +58,7 @@ export interface StorefrontSizeOption {
         dimensions?: Record<string, unknown>;
     } | null;
     provider_attributes?: Record<string, string>;
+    allowed_attribute_options?: Record<string, string[]>;
     source_country?: string | null;
     currency?: string | null;
     delivery_days?: string | null;

@@ -16,7 +16,6 @@ export const PRINT_CATEGORY_LABELS: Record<string, string> = {
     paperPrintBoxFramed: "Framed paper prints",
     canvasRolled: "Rolled canvas",
     canvasStretched: "Stretched canvas",
-    canvasClassicFrame: "Classic framed canvas",
     canvasFloatingFrame: "Floating framed canvas",
 };
 
@@ -106,7 +105,7 @@ export function extractCanvasWrapSelectionFromOverrides(
     if (!overrides || typeof overrides !== "object") {
         return "";
     }
-    for (const categoryId of ["canvasStretched", "canvasClassicFrame", "canvasFloatingFrame"]) {
+    for (const categoryId of ["canvasStretched", "canvasFloatingFrame"]) {
         const categoryOverride = overrides[categoryId];
         if (!categoryOverride || typeof categoryOverride !== "object") {
             continue;
@@ -128,7 +127,8 @@ export function mergeCanvasWrapIntoOverrides(
     wrap: string
 ): Record<string, unknown> | null {
     const nextOverrides: Record<string, unknown> = { ...(existingOverrides || {}) };
-    for (const categoryId of ["canvasStretched", "canvasClassicFrame", "canvasFloatingFrame"]) {
+    delete nextOverrides.canvasClassicFrame;
+    for (const categoryId of ["canvasStretched", "canvasFloatingFrame"]) {
         const categoryOverride =
             nextOverrides[categoryId] && typeof nextOverrides[categoryId] === "object"
                 ? { ...(nextOverrides[categoryId] as Record<string, unknown>) }

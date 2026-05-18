@@ -30,6 +30,7 @@ from src.integrations.prodigi.services.prodigi_fulfillment_policy import (
 )
 from src.integrations.prodigi.services.prodigi_shipping_policy import ProdigiShippingPolicyService
 from src.integrations.prodigi.services.prodigi_storefront_policy import (
+    RETIRED_STOREFRONT_CATEGORY_IDS,
     ProdigiStorefrontPolicyService,
 )
 from src.integrations.prodigi.services.sizing.selector import ProdigiSizeSelectorService
@@ -227,6 +228,8 @@ class ProdigiCuratedCsvBuilder:
             return None
         category_id = self.planner.match_category_id(parsed)
         if category_id is None:
+            return None
+        if category_id in RETIRED_STOREFRONT_CATEGORY_IDS:
             return None
         parsed["category_id"] = category_id
         if not self._is_production_variant(parsed, category_id):

@@ -6,6 +6,9 @@ from typing import Any
 
 from src.integrations.prodigi.catalog_pipeline.parser import ProdigiCsvRowParser
 from src.integrations.prodigi.catalog_pipeline.source import ProdigiCsvSource
+from src.integrations.prodigi.services.prodigi_storefront_policy import (
+    RETIRED_STOREFRONT_CATEGORY_IDS,
+)
 from src.services.artwork_print_profiles import (
     CANVAS_WRAP_OPTIONS,
     WRAPPED_CANVAS_CATEGORIES,
@@ -188,6 +191,8 @@ class ProdigiCatalogSnapshotPlanner:
 
     def resolve_category_id(self, parsed: dict[str, Any]) -> str | None:
         curated_category_id = parsed.get("category_id")
+        if curated_category_id in RETIRED_STOREFRONT_CATEGORY_IDS:
+            return None
         if curated_category_id in self._category_ids:
             return curated_category_id
         return self.match_category_id(parsed)

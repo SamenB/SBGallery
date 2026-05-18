@@ -30,7 +30,40 @@ export function ArtworkDetailsSection({
         Artwork Details
       </h2>
       <div style={{ display: "flex", justifyContent: "center" }}>
-        <div style={{ maxWidth: "600px", width: "100%" }}>
+        <div
+          style={{
+            maxWidth: "860px",
+            width: "100%",
+            display: "grid",
+            gridTemplateColumns: layoutMetrics.winW < 768 ? "1fr" : "1.25fr 0.9fr",
+            gap: layoutMetrics.winW < 768 ? "2rem" : "4rem",
+            alignItems: "start",
+          }}
+        >
+          <div>
+            <h3
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginBottom: "1rem",
+              }}
+            >
+              About
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.92rem",
+                lineHeight: 1.75,
+                color: "var(--color-charcoal-mid)",
+              }}
+            >
+              {work.description || "Artwork description is not available yet."}
+            </p>
+          </div>
+          <div>
           <h3
             style={{
               fontSize: "0.85rem",
@@ -47,7 +80,9 @@ export function ArtworkDetailsSection({
               {[
                 ["Medium", work.medium],
                 ["Size", work.size],
-              ].map(([label, value]) => (
+                work.print_aspect_ratio?.label ? ["Print Ratio", work.print_aspect_ratio.label] : null,
+                work.original_status ? ["Original Status", work.original_status.replaceAll("_", " ")] : null,
+              ].filter((item): item is string[] => Boolean(item)).map(([label, value]) => (
                 <tr key={label} style={{ borderBottom: "1px solid rgba(26,26,24,0.05)" }}>
                   <td
                     style={{
@@ -66,6 +101,7 @@ export function ArtworkDetailsSection({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

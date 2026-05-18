@@ -458,6 +458,7 @@ class ProdigiStorefrontSnapshotService:
                         "supplier_size_inches": None,
                         "print_area": None,
                         "provider_attributes": {},
+                        "allowed_attribute_options": {},
                         "source_country": None,
                         "currency": None,
                         "product_price": None,
@@ -511,6 +512,7 @@ class ProdigiStorefrontSnapshotService:
                 "supplier_size_inches": getattr(size, "supplier_size_inches", None),
                 "print_area": self._serialize_print_area(size),
                 "provider_attributes": self._serialize_provider_attributes(size),
+                "allowed_attribute_options": self._serialize_allowed_attributes(size),
                 "source_country": size.source_country,
                 "currency": selected_currency,
                 "product_price": selected_product_price,
@@ -637,6 +639,8 @@ class ProdigiStorefrontSnapshotService:
                     "supplier_size_cm": None,
                     "supplier_size_inches": None,
                     "print_area": None,
+                    "provider_attributes": {},
+                    "allowed_attribute_options": {},
                     "source_country": None,
                     "currency": None,
                     "product_price": None,
@@ -935,6 +939,10 @@ class ProdigiStorefrontSnapshotService:
             return {}
         attributes = dimensions.get("variant_attributes") or {}
         return dict(attributes) if isinstance(attributes, dict) else {}
+
+    def _serialize_allowed_attributes(self, size: Any) -> dict[str, list[Any]]:
+        allowed = getattr(size, "allowed_attributes", None) or {}
+        return dict(allowed) if isinstance(allowed, dict) else {}
 
     def _serialize_business_decision(self, decision: dict[str, Any]) -> dict[str, Any]:
         return {

@@ -24,20 +24,20 @@ export function ArtworkThumbnails({
     <div
       style={{
         position: "absolute",
-        bottom: isMobile ? "4px" : "auto",
-        top: isMobile ? "auto" : `calc(${layoutMetrics.imgH}px + 2rem)`,
+        bottom: isMobile ? "4px" : "6px",
+        top: "auto",
         width: "100%",
-        overflowX: "auto",
-        overflowY: "hidden",
+        overflowX: isMobile ? "auto" : "visible",
+        overflowY: "visible",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        paddingTop: isMobile ? "0px" : "40px",
-        transform: isMobile ? "none" : "translateY(-40px)",
-        paddingBottom: isMobile ? "0px" : "50px",
-        marginBottom: isMobile ? "0" : "-50px",
+        paddingTop: isMobile ? 0 : "18px",
+        transform: "none",
+        paddingBottom: isMobile ? 0 : "18px",
+        marginBottom: 0,
         scrollbarWidth: "none",
-        transition: "top 0.4s cubic-bezier(0.25, 1, 0.5, 1)",
+        transition: "bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1)",
         zIndex: 20,
       }}
     >
@@ -47,7 +47,7 @@ export function ArtworkThumbnails({
           alignItems: "center",
           gap: isMobile ? "0.25rem" : "0.5rem",
           justifyContent: "center",
-          paddingTop: "0.5rem",
+          paddingTop: isMobile ? "0.5rem" : 0,
           minWidth: "min-content",
         }}
       >

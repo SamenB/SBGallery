@@ -13,7 +13,6 @@ CATEGORY_MEDIUM_MAP = {
     "paperPrintClassicFramed": "paper",
     "canvasRolled": "canvas",
     "canvasStretched": "canvas",
-    "canvasClassicFrame": "canvas",
     "canvasFloatingFrame": "canvas",
 }
 

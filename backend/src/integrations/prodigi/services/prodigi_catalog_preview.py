@@ -155,18 +155,6 @@ CANVAS_CATEGORY_DEFS = (
         "sort_order": 3,
     },
     {
-        "id": "canvasClassicFrame",
-        "label": "Canvas Classic Frame",
-        "short_label": "Canvas Classic",
-        "medium": "canvas",
-        "presentation_values": ("framed",),
-        "frame_type_values": ("classic_frame",),
-        "material": "standard_canvas",
-        "material_label": "Standard Canvas",
-        "frame_label": "Classic frame",
-        "sort_order": 4,
-    },
-    {
         "id": "canvasFloatingFrame",
         "label": "Canvas Floating Frame",
         "short_label": "Canvas Float",

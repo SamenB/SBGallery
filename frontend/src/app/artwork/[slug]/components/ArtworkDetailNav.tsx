@@ -107,7 +107,7 @@ export function ArtworkDetailNav({
           padding: "0 0.25rem",
         }}
       >
-        <NavLink href={nextSlug ? `/artwork/${nextSlug}` : undefined} disabled={!nextSlug}>
+        <NavLink href={prevSlug ? `/artwork/${prevSlug}` : undefined} disabled={!prevSlug}>
           <NavArrow direction="next" /> Next
         </NavLink>
         <Divider />
@@ -126,7 +126,7 @@ export function ArtworkDetailNav({
           All Works
         </Link>
         <Divider />
-        <NavLink href={prevSlug ? `/artwork/${prevSlug}` : undefined} disabled={!prevSlug}>
+        <NavLink href={nextSlug ? `/artwork/${nextSlug}` : undefined} disabled={!nextSlug}>
           Prev <NavArrow direction="prev" />
         </NavLink>
       </div>

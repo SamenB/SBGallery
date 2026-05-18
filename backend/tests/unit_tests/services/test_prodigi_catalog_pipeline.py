@@ -86,6 +86,20 @@ def _stretched_canvas_row(**overrides: str) -> dict[str, str]:
     return row
 
 
+def _classic_canvas_row(**overrides: str) -> dict[str, str]:
+    row = _stretched_canvas_row(
+        SKU="CAN-19MM-FRA-SC-8x8",
+        **{
+            "Product type": "Framed Canvas",
+            "Product description": "Classic frame, 19mm standard stretcher bar",
+            "Frame": "Classic frame, 19mm standard stretcher bar",
+            "Edge": "19mm",
+        },
+    )
+    row.update(overrides)
+    return row
+
+
 @dataclass(frozen=True, slots=True)
 class _Dims:
     label: str
@@ -182,6 +196,15 @@ def test_parser_normalizes_rolled_paper_row(tmp_path) -> None:
     assert parsed["route_key"].startswith("GLOBAL-HGE-40X50|")
 
 
+def test_parser_retires_canvas_classic_frame_from_artshop_source(tmp_path) -> None:
+    parsed = parse_prodigi_csv_row(tmp_path / "catalog.csv", _classic_canvas_row())
+
+    assert parsed is not None
+    assert parsed["normalized_medium"] == "canvas"
+    assert parsed["normalized_frame_type"] == "classic_frame"
+    assert parsed["is_relevant_for_artshop"] is False
+
+
 def test_curated_source_reads_committed_shape(tmp_path) -> None:
     parsed = parse_prodigi_csv_row(tmp_path / "raw.csv", _rolled_paper_row())
     assert parsed is not None
@@ -197,6 +220,38 @@ def test_curated_source_reads_committed_shape(tmp_path) -> None:
     assert reparsed["sku"] == "GLOBAL-HGE-40X50"
     assert reparsed["category_id"] == "paperPrintRolled"
     assert reparsed["product_price"] == parsed["product_price"]
+
+
+def test_planner_ignores_retired_canvas_classic_curated_rows(tmp_path) -> None:
+    parsed = parse_prodigi_csv_row(tmp_path / "raw.csv", _classic_canvas_row())
+    assert parsed is not None
+    parsed["is_relevant_for_artshop"] = True
+    curated_csv = tmp_path / "prodigi_storefront_source.csv"
+    _write_csv(
+        curated_csv,
+        [curated_row_from_parsed(parsed, category_id="canvasClassicFrame")],
+    )
+    planner = ProdigiCatalogSnapshotPlanner(
+        category_defs=[
+            {
+                "id": "canvasClassicFrame",
+                "medium": "canvas",
+                "material": "standard_canvas",
+                "presentation_values": ("framed",),
+                "frame_type_values": ("classic_frame",),
+            }
+        ],
+        selector=_Selector(),
+        preview_service=_Preview(),
+        storefront_policy=_StorefrontPolicy(),
+        fulfillment_policy=_FulfillmentPolicy(),
+        shipping_policy=_ShippingPolicy(),
+    )
+
+    plan = planner.build_plan(ProdigiCuratedCsvSource(csv_path=curated_csv))
+
+    assert plan.matched_row_count == 0
+    assert "canvasClassicFrame" not in plan.kept_by_category
 
 
 def test_planner_aggregates_supported_offer_from_curated_source(tmp_path) -> None:

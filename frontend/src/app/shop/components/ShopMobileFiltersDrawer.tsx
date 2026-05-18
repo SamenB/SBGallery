@@ -1,5 +1,7 @@
 "use client";
 
+import { X } from "lucide-react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 type ShopMobileFiltersDrawerProps = {
@@ -12,10 +14,53 @@ type ShopMobileFiltersDrawerProps = {
 };
 
 export function ShopMobileFiltersDrawer({ open, activeFilterCount, resultCount, onClose, onClearAll, children }: ShopMobileFiltersDrawerProps) {
+  useEffect(() => {
+    if (!open) return;
+
+    const scrollY = window.scrollY;
+    const { body } = document;
+    const previousStyles = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    };
+
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
+    return () => {
+      body.style.overflow = previousStyles.overflow;
+      body.style.position = previousStyles.position;
+      body.style.top = previousStyles.top;
+      body.style.width = previousStyles.width;
+      window.scrollTo({ top: scrollY, behavior: "instant" });
+    };
+  }, [open]);
+
   return (
     <>
-      {open && <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(26,26,24,0.75)", zIndex: 40 }} />}
+      {open && (
+        <div
+          onClick={onClose}
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(26,26,24,0.68)",
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
+            zIndex: 40,
+            touchAction: "none",
+          }}
+        />
+      )}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shop filters"
         style={{
           position: "fixed",
           bottom: 0,
@@ -24,71 +69,96 @@ export function ShopMobileFiltersDrawer({ open, activeFilterCount, resultCount, 
           zIndex: 50,
           backgroundColor: "#ffffff",
           borderTop: "1px solid var(--color-border)",
+          borderRadius: "10px 10px 0 0",
+          boxShadow: "0 -18px 60px rgba(26,26,24,0.22)",
           transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.38s cubic-bezier(0.4,0,0.2,1)",
-          maxHeight: "85vh",
-          overflowY: "auto",
+          maxHeight: "min(86dvh, 720px)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          overscrollBehavior: "contain",
+          pointerEvents: open ? "auto" : "none",
+          visibility: open ? "visible" : "hidden",
+          transitionProperty: "transform, visibility",
         }}
       >
         <div
           style={{
-            padding: "1rem 1.5rem",
+            padding: "1.1rem 1.25rem 0.95rem",
             borderBottom: "1px solid rgba(26,26,24,0.06)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            position: "sticky",
-            top: 0,
             backgroundColor: "#ffffff",
-            zIndex: 1,
+            flexShrink: 0,
           }}
         >
-          <div style={{ position: "absolute", top: "0.5rem", left: "50%", transform: "translateX(-50%)", width: "32px", height: "3px", borderRadius: "2px", backgroundColor: "rgba(26,26,24,0.12)" }} />
-          <h3 style={{ fontFamily: "var(--font-sans)", fontSize: "0.7rem", fontWeight: 500, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: "0.5rem", color: "var(--color-charcoal)" }}>Filters</h3>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginTop: "0.5rem" }}>
+          <div style={{ position: "absolute", top: "0.55rem", left: "50%", transform: "translateX(-50%)", width: "36px", height: "3px", borderRadius: "2px", backgroundColor: "rgba(26,26,24,0.16)" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", paddingTop: "0.35rem" }}>
+            <h3 style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", fontWeight: 650, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--color-charcoal)" }}>Filters</h3>
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: "0.72rem", fontWeight: 300, color: "var(--color-muted)" }}>
+              {resultCount} work{resultCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "0.65rem", alignItems: "center", paddingTop: "0.35rem" }}>
             {activeFilterCount > 0 && (
               <button
+                type="button"
                 onClick={onClearAll}
                 style={{
                   fontFamily: "var(--font-sans)",
                   fontSize: "0.65rem",
-                  fontWeight: 300,
-                  color: "var(--color-charcoal-mid)",
-                  background: "none",
-                  border: "none",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--color-charcoal)",
+                  background: "rgba(26,26,24,0.035)",
+                  border: "1px solid rgba(26,26,24,0.1)",
+                  borderRadius: "999px",
                   cursor: "pointer",
-                  borderBottom: "1px solid rgba(26,26,24,0.2)",
-                  paddingBottom: "1px",
+                  padding: "0.55rem 0.75rem",
                 }}
               >
                 Clear all
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Close filters"
               style={{
-                fontSize: "2rem",
-                fontWeight: 200,
                 color: "var(--color-charcoal)",
-                background: "none",
-                border: "none",
+                background: "#ffffff",
+                border: "1px solid rgba(26,26,24,0.14)",
+                borderRadius: "999px",
                 cursor: "pointer",
-                minWidth: "64px",
-                minHeight: "64px",
+                width: "42px",
+                height: "42px",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "flex-end",
-                lineHeight: 1,
-                padding: "0 10px",
+                justifyContent: "center",
+                padding: 0,
               }}
             >
-              x
+              <X size={17} strokeWidth={1.7} aria-hidden="true" />
             </button>
           </div>
         </div>
-        <div style={{ padding: "1.25rem 1.5rem 1rem" }}>{children}</div>
-        <div style={{ padding: "1rem 1.5rem", borderTop: "1px solid rgba(26,26,24,0.06)", position: "sticky", bottom: 0, backgroundColor: "#ffffff" }}>
+        <div
+          style={{
+            padding: "1.1rem 1.25rem 1rem",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            flex: "1 1 auto",
+          }}
+        >
+          {children}
+        </div>
+        <div style={{ padding: "0.95rem 1.25rem 1rem", borderTop: "1px solid rgba(26,26,24,0.06)", backgroundColor: "#ffffff", flexShrink: 0 }}>
           <button
+            type="button"
             onClick={onClose}
             style={{
               width: "100%",

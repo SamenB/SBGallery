@@ -261,7 +261,10 @@ class ProdigiStorefrontBakeService:
                     destination_country=storefront_preview.get("country_code"),
                     category_id=category_id,
                     attributes=default_attributes,
-                    optional_attribute_keys=self._optional_provider_attribute_keys(category_id),
+                    optional_attribute_keys=self._optional_provider_attribute_keys(
+                        category_id=category_id,
+                        allowed_attributes=card["storefront_policy"]["allowed_attributes"],
+                    ),
                     supplier_size_inches=size.get("size_inches"),
                     supplier_size_cm=size.get("size_cm"),
                     slot_size_label=size.get("slot_size_label"),
@@ -424,6 +427,98 @@ class ProdigiStorefrontBakeService:
         storefront_preview["removed_size_options"] = removed_sizes
         storefront_preview["removed_size_options_without_provider_print_area"] = removed_sizes
 
+    async def _apply_provider_attribute_options(
+        self,
+        storefront_preview: dict[str, Any],
+        print_area_resolver: ProdigiPrintAreaResolver,
+    ) -> None:
+        visible_cards: list[dict[str, Any]] = []
+        hidden_cards = list(storefront_preview.get("hidden_cards", []))
+        removed_sizes = list(storefront_preview.get("removed_size_options") or [])
+
+        for card in storefront_preview.get("visible_cards", []):
+            policy_allowed = card.get("storefront_policy", {}).get("allowed_attributes") or {}
+            if not policy_allowed:
+                for size in card.get("size_options", []):
+                    size["allowed_attribute_options"] = {}
+                visible_cards.append(card)
+                continue
+
+            kept_sizes: list[dict[str, Any]] = []
+            allowed_union: dict[str, list[Any]] = {key: [] for key in policy_allowed}
+            for size in card.get("size_options", []):
+                size_allowed: dict[str, list[Any]] = {}
+                missing_fields: list[dict[str, Any]] = []
+                for key, policy_values in policy_allowed.items():
+                    provider_values = await print_area_resolver.get_available_attribute_values(
+                        sku=size.get("sku"),
+                        destination_country=storefront_preview.get("country_code"),
+                        attribute_key=key,
+                    )
+                    filtered_values = self._intersect_provider_attribute_values(
+                        policy_values=policy_values,
+                        provider_values=provider_values,
+                    )
+                    if policy_values and not filtered_values:
+                        missing_fields.append(
+                            {
+                                "attribute_key": key,
+                                "policy_values": list(policy_values),
+                                "provider_values": sorted(provider_values),
+                            }
+                        )
+                        continue
+                    size_allowed[key] = filtered_values
+                    for value in filtered_values:
+                        if value not in allowed_union[key]:
+                            allowed_union[key].append(value)
+
+                if missing_fields:
+                    removed_sizes.append(
+                        {
+                            "country_code": storefront_preview.get("country_code"),
+                            "ratio": storefront_preview.get("ratio"),
+                            "category_id": card.get("category_id"),
+                            "slot_size_label": size.get("slot_size_label"),
+                            "sku": size.get("sku"),
+                            "reason": "missing_required_provider_attribute_options",
+                            "missing_attributes": missing_fields,
+                        }
+                    )
+                    continue
+
+                size["allowed_attribute_options"] = size_allowed
+                kept_sizes.append(size)
+
+            if not kept_sizes:
+                hidden_cards.append(
+                    {
+                        "category_id": card.get("category_id"),
+                        "label": card.get("label"),
+                        "reason": "No size options remain after provider attribute validation.",
+                        "storefront_action": card.get("storefront_action"),
+                        "fulfillment_level": card.get("fulfillment_level"),
+                        "geography_scope": card.get("geography_scope"),
+                        "tax_risk": card.get("tax_risk"),
+                    }
+                )
+                continue
+
+            card["storefront_policy"] = {
+                **card.get("storefront_policy", {}),
+                "allowed_attributes": {
+                    key: values for key, values in allowed_union.items() if values
+                },
+            }
+            card["size_options"] = kept_sizes
+            self._refresh_card_size_summary(card)
+            visible_cards.append(card)
+
+        storefront_preview["visible_cards"] = visible_cards
+        storefront_preview["hidden_cards"] = hidden_cards
+        storefront_preview["removed_size_options"] = removed_sizes
+        storefront_preview["removed_size_options_without_provider_print_area"] = removed_sizes
+
     def _assert_provider_print_area_sizes(self, storefront_preview: dict[str, Any]) -> None:
         missing: list[str] = []
         for card in storefront_preview.get("visible_cards", []):
@@ -472,8 +567,41 @@ class ProdigiStorefrontBakeService:
                 defaults[key] = values[0]
         return defaults
 
-    def _optional_provider_attribute_keys(self, category_id: str) -> set[str]:
-        return set()
+    def _optional_provider_attribute_keys(
+        self,
+        *,
+        category_id: str,
+        allowed_attributes: dict[str, list[Any]] | None = None,
+    ) -> set[str]:
+        return set((allowed_attributes or {}).keys())
+
+    def _intersect_provider_attribute_values(
+        self,
+        *,
+        policy_values: list[Any],
+        provider_values: set[str],
+    ) -> list[Any]:
+        provider_normalized = {self._normalize_attribute_value(value) for value in provider_values}
+        return [
+            value
+            for value in policy_values
+            if self._normalize_attribute_value(value) in provider_normalized
+        ]
+
+    def _refresh_card_size_summary(self, card: dict[str, Any]) -> None:
+        kept_sizes = card.get("size_options") or []
+        card["available_size_count"] = len(kept_sizes)
+        card["size_labels"] = [item["size_label"] for item in kept_sizes]
+        totals = [item["total_cost"] for item in kept_sizes if item.get("total_cost") is not None]
+        currency = next((item.get("currency") for item in kept_sizes if item.get("currency")), None)
+        card["price_range"] = {
+            "currency": currency,
+            "min_total": min(totals) if totals else None,
+            "max_total": max(totals) if totals else None,
+        }
+
+    def _normalize_attribute_value(self, value: Any) -> str:
+        return self.preview_service.storefront_policy._normalize_value(value)
 
     def _pixel_ratio_delta(
         self,

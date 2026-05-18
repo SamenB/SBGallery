@@ -10,8 +10,8 @@ import { ArtworkThumbnails } from "./ArtworkThumbnails";
 type ArtworkImage = NonNullable<Artwork["images"]>[number];
 
 const getImageDimensions = (
-  work: Artwork,
-  idx: number,
+  _work: Artwork,
+  _idx: number,
   aspect: number | undefined,
   layoutMetrics: ArtworkLayoutMetrics,
 ): CSSProperties => {
@@ -20,15 +20,15 @@ const getImageDimensions = (
   }
 
   if (layoutMetrics.winW < 768) {
-    const width = layoutMetrics.boxW * 0.95;
+    const availableWidth = Math.min(layoutMetrics.boxW, layoutMetrics.winW - 18);
+    const width = Math.max(0, availableWidth);
     return { width: `${width}px`, height: `${width / aspect}px`, margin: "0 auto" };
   }
 
   if (layoutMetrics.boxH <= 0) return { margin: "auto" };
 
-  const isVertical = aspect < 1;
-  const thumbReserve = isVertical ? 280 : 200;
-  const maxW = layoutMetrics.boxW - 45;
+  const thumbReserve = 104;
+  const maxW = layoutMetrics.boxW - 12;
   const maxH = layoutMetrics.boxH - thumbReserve;
   let width = maxW;
   let height = width / aspect;
@@ -105,40 +105,49 @@ export function ArtworkImageGallery({
     0,
     (layoutMetrics.boxW - activeImageWidth) / 2,
   );
+  const isMobile = layoutMetrics.winW < 768;
+  const slideGapRem = isMobile ? 1 : 8;
 
   return (
     <div className="artwork-img-col">
       <div
         className="artwork-img-area"
-        style={{ marginTop: layoutMetrics.winW < 768 ? "0.75rem" : "0" }}
+        style={{ marginTop: isMobile ? "0.75rem" : "0" }}
       >
-        <div className="artwork-slider-wrap">
+        <div
+          className="artwork-slider-wrap"
+          style={isMobile ? undefined : { height: `${layoutMetrics.boxH || 620}px` }}
+        >
           <div
             ref={boxRef}
             style={{
               width: "100%",
-              height: layoutMetrics.winW < 768 ? "auto" : "100%",
-              position: layoutMetrics.winW < 768 ? "relative" : "absolute",
-              inset: layoutMetrics.winW < 768 ? "auto" : 0,
+              height: isMobile ? "auto" : "100%",
+              position: isMobile ? "relative" : "absolute",
+              inset: isMobile ? "auto" : 0,
             }}
           >
             <div
               className="w-full z-10"
               style={{
                 position: "relative",
-                margin: "-60px -30px",
-                padding: "60px 30px",
-                width: "calc(100% + 60px)",
+                margin: isMobile ? "-28px -8px" : "-60px -30px",
+                padding: isMobile ? "28px 8px" : "60px 30px",
+                width: isMobile ? "calc(100% + 16px)" : "calc(100% + 60px)",
                 height:
-                  layoutMetrics.winW < 768
-                    ? `calc(${activeImageHeight}px + 120px + 32px + 24px)`
+                  isMobile
+                    ? `calc(${activeImageHeight}px + 56px + 32px + 24px)`
                     : "calc(100% + 120px)",
                 transition: "height 0.4s cubic-bezier(0.25, 1, 0.5, 1)",
                 overflow: "hidden",
                 WebkitMaskImage:
-                  "linear-gradient(to right, transparent 0px, black 15px, black calc(100% - 15px), transparent 100%)",
+                  isMobile
+                    ? "none"
+                    : "linear-gradient(to right, transparent 0px, black 15px, black calc(100% - 15px), transparent 100%)",
                 maskImage:
-                  "linear-gradient(to right, transparent 0px, black 15px, black calc(100% - 15px), transparent 100%)",
+                  isMobile
+                    ? "none"
+                    : "linear-gradient(to right, transparent 0px, black 15px, black calc(100% - 15px), transparent 100%)",
               }}
               onTouchStart={(e) => {
                 hasTouchRef.current = true;
@@ -163,13 +172,13 @@ export function ArtworkImageGallery({
               <div
                 style={{
                   display: "flex",
-                  gap: "8rem",
+                  gap: `${slideGapRem}rem`,
                   width: "100%",
                   height: "100%",
                   transition: isZooming
                     ? "none"
                     : "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
-                  transform: `translateX(calc(-${selectedImageIndex * 100}% - ${selectedImageIndex * 8}rem))`,
+                  transform: `translateX(calc(-${selectedImageIndex * 100}% - ${selectedImageIndex * slideGapRem}rem))`,
                 }}
               >
                 {images.length > 0 ? (
@@ -213,7 +222,7 @@ export function ArtworkImageGallery({
             <ArtworkFullscreenButton
               top={activeImageHeight + 5}
               right={viewFullSizeRightOffset}
-              visible={layoutMetrics.winW >= 768 && activeImageHeight > 0}
+              visible={!isMobile && activeImageHeight > 0}
               onClick={onOpenFullSize}
             />
           </div>
@@ -262,12 +271,15 @@ function ArtworkImageSlide({
   onImageDimensions: (idx: number, naturalWidth: number, naturalHeight: number) => void;
   onOpenFullSize: () => void;
 }) {
+  const isMobile = layoutMetrics.winW < 768;
+  const baseImageScale = isMobile ? 1.003 : 1;
+
   return (
     <div
       style={{
         flex: "0 0 100%",
         width: "100%",
-        height: layoutMetrics.winW < 768 ? "auto" : "100%",
+        height: isMobile ? "auto" : "100%",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
@@ -296,8 +308,11 @@ function ArtworkImageSlide({
           position: "relative",
           overflow: "hidden",
           borderRadius: "4px",
+          background: "#1f2524",
           boxShadow: "var(--shadow-card-deep)",
           cursor: "crosshair",
+          fontSize: 0,
+          lineHeight: 0,
           ...explicitDimensions,
         }}
       >
@@ -318,13 +333,16 @@ function ArtworkImageSlide({
             }
           }}
           style={{
+            display: "block",
             maxWidth: "100%",
             maxHeight: "100%",
             width: explicitDimensions.width ? "100%" : "auto",
             height: explicitDimensions.height ? "100%" : "auto",
             objectFit: "contain",
             transform:
-              isZooming && selectedImageIndex === idx ? "scale(2.5)" : "scale(1)",
+              isZooming && selectedImageIndex === idx
+                ? "scale(2.5)"
+                : `scale(${baseImageScale})`,
             transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
             transition: isZooming ? "none" : "transform 0.3s ease",
           }}

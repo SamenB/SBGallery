@@ -129,7 +129,6 @@ RECOMMENDED_CATEGORY_MULTIPLIERS: dict[str, dict[str, float]] = {
         "paperPrintClassicFramed": 2.5,
         "canvasRolled": 3.25,
         "canvasStretched": 2.85,
-        "canvasClassicFrame": 2.3,
         "canvasFloatingFrame": 2.2,
     },
     "mid": {
@@ -138,7 +137,6 @@ RECOMMENDED_CATEGORY_MULTIPLIERS: dict[str, dict[str, float]] = {
         "paperPrintClassicFramed": 2.2,
         "canvasRolled": 2.9,
         "canvasStretched": 2.55,
-        "canvasClassicFrame": 2.05,
         "canvasFloatingFrame": 1.95,
     },
     "budget": {
@@ -147,7 +145,6 @@ RECOMMENDED_CATEGORY_MULTIPLIERS: dict[str, dict[str, float]] = {
         "paperPrintClassicFramed": 1.95,
         "canvasRolled": 2.55,
         "canvasStretched": 2.3,
-        "canvasClassicFrame": 1.8,
         "canvasFloatingFrame": 1.75,
     },
 }
@@ -168,7 +165,6 @@ ALL_CATEGORY_IDS: list[str] = [
     "paperPrintClassicFramed",
     "canvasRolled",
     "canvasStretched",
-    "canvasClassicFrame",
     "canvasFloatingFrame",
 ]
 
