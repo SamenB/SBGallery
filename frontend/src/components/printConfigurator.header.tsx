@@ -1,19 +1,16 @@
 "use client";
 
 import type {
-  ArtworkPrintStorefront,
   MediumOffers,
   PurchaseType,
 } from "@/lib/artworkStorefront";
 
 export function PrintConfiguratorHeader({
   purchaseType,
-  storefront,
   mediumOffers,
   hasHighResAsset,
 }: {
   purchaseType: PurchaseType;
-  storefront: ArtworkPrintStorefront;
   mediumOffers: MediumOffers | null;
   hasHighResAsset: boolean;
 }) {
@@ -25,9 +22,8 @@ export function PrintConfiguratorHeader({
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
         <div>
           <p className="pc-title">Fine Art {purchaseType === "canvas" ? "Canvas" : "Paper"} Prints</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-            <p className="pc-subtitle">Baked storefront profile for {storefront.country_name || storefront.country_code}</p>
-            {hasHighResAsset && (
+          {hasHighResAsset && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
               <span
                 style={{
                   display: "inline-flex",
@@ -48,8 +44,8 @@ export function PrintConfiguratorHeader({
                 </svg>
                 Verified Full-Res
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         {limitedAvailable && (
           <div

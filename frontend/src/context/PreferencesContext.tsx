@@ -60,6 +60,7 @@ export const UNITS_LABELS: Record<Units, string> = {
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined);
 
 const STORAGE_KEY = "artshop_preferences";
+const PREFERENCES_STORAGE_VERSION = 2;
 const RATE_STORAGE_KEY = "artshop_exchange_rates";
 const DEFAULT_RATES: Record<Currency, number> = {
     USD: 1,
@@ -71,6 +72,25 @@ type StoredRatesPayload = {
     fetchedAt: string;
     source?: "live" | "fallback";
 };
+
+type StoredPreferencesPayload = {
+    language?: unknown;
+    currency?: unknown;
+    units?: unknown;
+    version?: unknown;
+};
+
+function isLanguage(value: unknown): value is Language {
+    return value === "en" || value === "uk";
+}
+
+function isCurrency(value: unknown): value is Currency {
+    return value === "USD" || value === "UAH";
+}
+
+function isUnits(value: unknown): value is Units {
+    return value === "cm" || value === "in";
+}
 
 function isValidRatePayload(payload: unknown): payload is StoredRatesPayload {
     if (!payload || typeof payload !== "object") {
@@ -170,10 +190,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.language) setLanguageState(parsed.language);
-                if (parsed.currency) setCurrencyState(parsed.currency);
-                if (parsed.units) setUnitsState(parsed.units);
+                const parsed = JSON.parse(saved) as StoredPreferencesPayload;
+                if (isLanguage(parsed.language)) setLanguageState(parsed.language);
+                if (isUnits(parsed.units)) setUnitsState(parsed.units);
+                if (
+                    parsed.version === PREFERENCES_STORAGE_VERSION &&
+                    isCurrency(parsed.currency)
+                ) {
+                    setCurrencyState(parsed.currency);
+                } else {
+                    setCurrencyState(DEFAULTS.currency);
+                }
             }
         } catch {
             // Silently ignore corrupted storage data.
@@ -193,7 +220,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (!loaded) return;
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ language, currency, units }));
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    language,
+                    currency,
+                    units,
+                    version: PREFERENCES_STORAGE_VERSION,
+                })
+            );
         } catch {
             // Silently ignore storage quota/permission issues.
         }
@@ -210,12 +245,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     /** Updates language and applies smart defaults for currency/units. */
     const setLanguage = (lang: Language) => {
         setLanguageState(lang);
-        // Smart syncing: switch defaults based on cultural territory.
+        // Keep display currency USD-first; language only changes measurement defaults.
         if (lang === "uk") {
-            setCurrencyState("UAH");
             setUnitsState("cm");
         } else if (lang === "en") {
-            setCurrencyState("USD");
             setUnitsState("in");
         }
     };

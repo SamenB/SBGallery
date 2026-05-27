@@ -123,7 +123,6 @@ export function ArtworkPurchaseStyles() {
 
             .pc-header { padding-bottom: 1.25rem; border-bottom: 1px solid var(--color-border); }
             .pc-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; font-weight: 500; color: var(--color-charcoal); margin: 0 0 0.3rem; letter-spacing: 0.01em; }
-            .pc-subtitle { font-family: var(--font-sans); font-size: 0.68rem; color: var(--color-muted); margin: 0; letter-spacing: 0.02em; }
             .step-row { display: flex; flex-direction: column; gap: 0.6rem; }
             .step-label { display: flex; align-items: center; gap: 0.5rem; margin-left: -6px; }
             .step-number { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.65rem; font-weight: 500; color: var(--color-charcoal); line-height: 1; width: 1.6rem; flex-shrink: 0; }

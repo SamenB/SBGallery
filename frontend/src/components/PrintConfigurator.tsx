@@ -156,7 +156,6 @@ export default function PrintConfigurator({
     <div className="print-configurator-inner">
       <PrintConfiguratorHeader
         purchaseType={purchaseType}
-        storefront={storefront}
         mediumOffers={mediumOffers}
         hasHighResAsset={hasHighResAsset}
       />
