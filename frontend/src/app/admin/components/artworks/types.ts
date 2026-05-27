@@ -57,8 +57,8 @@ export interface MasterSlot {
         print_area_name?: string | null;
         visible_art_width_px?: number | null;
         visible_art_height_px?: number | null;
-        physical_width_in?: number | null;
-        physical_height_in?: number | null;
+        physical_width_in?: number | string | null;
+        physical_height_in?: number | string | null;
     } | null;
     required_min_px_source?: string | null;
     export_guidance?: {
@@ -75,8 +75,8 @@ export interface MasterSlot {
         full_file_ratio_diff_warning?: boolean;
         visible_art_width_px?: number | null;
         visible_art_height_px?: number | null;
-        physical_width_in?: number | null;
-        physical_height_in?: number | null;
+        physical_width_in?: number | string | null;
+        physical_height_in?: number | string | null;
         provider_target_differs_from_visible_art?: boolean;
         provider_target_width_px?: number | null;
         provider_target_height_px?: number | null;

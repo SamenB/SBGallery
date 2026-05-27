@@ -242,18 +242,35 @@ export function formatPrintCategory(categoryId: string): string {
     return PRINT_CATEGORY_LABELS[categoryId] || titleCase(categoryId);
 }
 
-export function formatInchesValue(value: number | null | undefined): string | null {
-    if (value === null || value === undefined || Number.isNaN(value)) {
+function toFiniteNumber(value: number | string | null | undefined): number | null {
+    if (value === null || value === undefined) {
         return null;
     }
-    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
+    if (typeof value === "string" && value.trim() === "") {
+        return null;
+    }
+    const numeric = typeof value === "number" ? value : Number(value.trim());
+    return Number.isFinite(numeric) ? numeric : null;
 }
 
-export function formatPxSize(width: number | null | undefined, height: number | null | undefined): string | null {
-    if (!width || !height) {
+export function formatInchesValue(value: number | string | null | undefined): string | null {
+    const numeric = toFiniteNumber(value);
+    if (numeric === null) {
         return null;
     }
-    return `${width} x ${height} px`;
+    return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2).replace(/\.?0+$/, "");
+}
+
+export function formatPxSize(
+    width: number | string | null | undefined,
+    height: number | string | null | undefined
+): string | null {
+    const numericWidth = toFiniteNumber(width);
+    const numericHeight = toFiniteNumber(height);
+    if (!numericWidth || !numericHeight) {
+        return null;
+    }
+    return `${Math.round(numericWidth)} x ${Math.round(numericHeight)} px`;
 }
 
 export function uploadFormDataWithProgress<T>(

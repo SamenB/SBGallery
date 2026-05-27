@@ -284,6 +284,51 @@ async def test_get_workflow_prefers_baked_print_area_pixels_over_rounded_size_la
     assert slot["derivative_plan"]["strategy"] == "exact_cover_crop"
 
 
+@pytest.mark.asyncio
+async def test_get_workflow_normalizes_string_print_area_dimensions():
+    artwork = make_artwork(paper=False, canvas=True, ratio_label="4:5")
+    asset = make_master_asset(
+        asset_id=12,
+        artwork_id=artwork.id,
+        category_id="master",
+        asset_role="master",
+        file_url="/static/print-prep/1/canvas/master.png",
+        width_px=14454,
+        height_px=18054,
+    )
+    service = make_service(
+        assets=[asset],
+        groups=[
+            make_group(
+                "canvasStretched",
+                "122x152",
+                ratio_label="4:5",
+                print_area_width_px=14454,
+                print_area_height_px=18054,
+                print_area_source="prodigi_product_details",
+                print_area_dimensions={
+                    "visible_art_width_px": "14400",
+                    "visible_art_height_px": "18000",
+                    "physical_width_in": "48.0",
+                    "physical_height_in": "60.0",
+                    "variant_attributes": {"wrap": "MirrorWrap"},
+                },
+            ),
+        ],
+    )
+    service._get_artwork_orm = AsyncMock(return_value=artwork)
+
+    payload = await service.get_workflow(artwork.id)
+
+    slot = next(item for item in payload["master_slots"] if item["slot_id"] == "master")
+    assert slot["required_min_px"]["visible_art_width_px"] == 14400
+    assert slot["required_min_px"]["visible_art_height_px"] == 18000
+    assert slot["required_min_px"]["physical_width_in"] == 48.0
+    assert slot["required_min_px"]["physical_height_in"] == 60.0
+    assert slot["export_guidance"]["physical_width_in"] == 48.0
+    assert slot["export_guidance"]["physical_height_in"] == 60.0
+
+
 def test_build_strict_ratio_cover_target_uses_universal_ratio_presets() -> None:
     service = make_service()
     artwork = make_artwork(paper=False, canvas=True, ratio_label="2:3")

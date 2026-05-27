@@ -1168,12 +1168,20 @@ class ArtworkPrintWorkflowService:
                         "print_area_dimensions": dims.get("print_area_dimensions"),
                         "supplier_size_inches": dims.get("supplier_size_inches"),
                         "supplier_size_cm": dims.get("supplier_size_cm"),
-                        "visible_art_width_px": print_area_dimensions.get("visible_art_width_px"),
-                        "visible_art_height_px": print_area_dimensions.get("visible_art_height_px"),
-                        "physical_width_in": print_area_dimensions.get("physical_width_in")
-                        or print_area_dimensions.get("width_in"),
-                        "physical_height_in": print_area_dimensions.get("physical_height_in")
-                        or print_area_dimensions.get("height_in"),
+                        "visible_art_width_px": self._optional_int(
+                            print_area_dimensions.get("visible_art_width_px")
+                        ),
+                        "visible_art_height_px": self._optional_int(
+                            print_area_dimensions.get("visible_art_height_px")
+                        ),
+                        "physical_width_in": self._first_optional_float(
+                            print_area_dimensions.get("physical_width_in"),
+                            print_area_dimensions.get("width_in"),
+                        ),
+                        "physical_height_in": self._first_optional_float(
+                            print_area_dimensions.get("physical_height_in"),
+                            print_area_dimensions.get("height_in"),
+                        ),
                     }
         return largest
 
@@ -1692,6 +1700,26 @@ class ArtworkPrintWorkflowService:
             except json.JSONDecodeError:
                 return {}
         return dict(value) if isinstance(value, dict) else {}
+
+    def _optional_float(self, value: Any) -> float | None:
+        if value is None or value == "":
+            return None
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        return numeric if math.isfinite(numeric) else None
+
+    def _first_optional_float(self, *values: Any) -> float | None:
+        for value in values:
+            numeric = self._optional_float(value)
+            if numeric is not None:
+                return numeric
+        return None
+
+    def _optional_int(self, value: Any) -> int | None:
+        numeric = self._optional_float(value)
+        return round(numeric) if numeric is not None else None
 
     def _percentage(self, count: int, total: int) -> float | None:
         if total <= 0:

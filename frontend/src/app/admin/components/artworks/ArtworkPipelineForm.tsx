@@ -127,6 +127,16 @@ export function ArtworkPipelineForm({
                             const strategyLabel = getDerivativeStrategyLabel(
                                 slot.derivative_plan?.strategy
                             );
+                            const physicalWidthLabel = formatInchesValue(
+                                slot.required_min_px?.physical_width_in
+                            );
+                            const physicalHeightLabel = formatInchesValue(
+                                slot.required_min_px?.physical_height_in
+                            );
+                            const productSizeLabel =
+                                physicalWidthLabel && physicalHeightLabel
+                                    ? ` · Product ${physicalWidthLabel} x ${physicalHeightLabel} in`
+                                    : "";
                             const coversCategories = Array.isArray(slot.covers_categories)
                                 ? slot.covers_categories
                                 : [];
@@ -283,10 +293,7 @@ export function ArtworkPipelineForm({
                                                         slot.required_min_px.visible_art_width_px,
                                                         slot.required_min_px.visible_art_height_px
                                                     )}
-                                                    {slot.required_min_px.physical_width_in &&
-                                                    slot.required_min_px.physical_height_in
-                                                        ? ` · Product ${formatInchesValue(slot.required_min_px.physical_width_in)} x ${formatInchesValue(slot.required_min_px.physical_height_in)} in`
-                                                        : ""}
+                                                    {productSizeLabel}
                                                 </p>
                                             ) : null}
                                         </div>
