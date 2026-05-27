@@ -1,5 +1,6 @@
 "use client";
 
+import type { Ref } from "react";
 import { IMAGE_ZONE } from "../constants";
 import type { Product } from "../types";
 import type { AspectRatioRange } from "../utils";
@@ -22,7 +23,7 @@ type ShopCatalogResultsProps = {
   imageAspectRatioRange?: AspectRatioRange;
   rowImageStageHeights?: (number | undefined)[];
   visibleCount: number;
-  loadMoreRef: (node?: Element | null | undefined) => void;
+  loadMoreRef: Ref<HTMLDivElement>;
   onClearAll: () => void;
   onAuthRequired?: (id: number, isLiked: boolean) => void;
   onLikeChange: (id: number, isLiked: boolean) => void;

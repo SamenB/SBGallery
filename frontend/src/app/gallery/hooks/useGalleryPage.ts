@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useUser } from "@/context/UserContext";
+import { useInfiniteVisibleCount } from "@/hooks/useInfiniteVisibleCount";
 import { apiFetch, getApiUrl } from "@/utils";
 import { getProductAspectRatio } from "@/app/shop/utils";
 import { IMAGE_ZONE } from "../constants";
@@ -63,51 +64,21 @@ export function useGalleryPage() {
   const [artworkContainerWidths, setArtworkContainerWidths] = useState<
     Record<number, number>
   >({});
-  const [visibleCount, setVisibleCount] = useState(12);
   const [error, setError] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
 
-  /* ── Infinite scroll via window scroll events ──
-   *
-   * We calculate the remaining scrollable distance from the bottom of the page.
-   * If it is less than 800px, we load more items. This is highly reliable on
-   * both desktop and mobile browsers, and does not depend on sentinel elements
-   * or IntersectionObserver layout checks.
-   */
-  const totalRef = useRef(0);
-  const pageRef = useRef(itemsPerPage);
-  totalRef.current = allArtworks.length;
-  pageRef.current = itemsPerPage;
-
-  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
-    // No-op callback ref to preserve component prop matching
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-      const docHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-      const viewH = window.innerHeight || document.documentElement.clientHeight || 0;
-
-      if (docHeight - scrollY - viewH < 800) {
-        setVisibleCount((prev) => {
-          if (prev >= totalRef.current) return prev;
-          return prev + pageRef.current;
-        });
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    // Run an initial check after mounting / updating visibleCount to chain-load if necessary
-    handleScroll();
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [visibleCount, allArtworks.length]);
+  // Shared progressive rendering: sentinel observer plus passive scroll fallback.
+  const galleryPaginationResetKey = `${groupBy}|${sortKey}|${gridMode}`;
+  const { visibleCount, loadMoreRef } = useInfiniteVisibleCount<HTMLDivElement>({
+    totalCount: allArtworks.length,
+    pageSize: itemsPerPage,
+    resetKey: galleryPaginationResetKey,
+    preloadDistance: isMobile ? 1200 : 900,
+    enabled: !loading && !error,
+  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -163,10 +134,6 @@ export function useGalleryPage() {
       })
       .catch(() => setLikedIds(new Set()));
   }, [user, pendingLikes]);
-
-  useEffect(() => {
-    setVisibleCount((prev) => Math.max(prev, itemsPerPage));
-  }, [itemsPerPage]);
 
   const handleSetGridMode = (val: GalleryGridMode) => {
     setGridMode(val);

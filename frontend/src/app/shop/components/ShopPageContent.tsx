@@ -1,8 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useInView } from "react-intersection-observer";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useUser } from "@/context/UserContext";
+import { useInfiniteVisibleCount } from "@/hooks/useInfiniteVisibleCount";
 import { getApiUrl, apiFetch } from "@/utils";
 import { SORT_OPTIONS } from "../constants";
 import { getProductAspectRatio, sortProducts } from "../utils";
@@ -57,7 +57,6 @@ export function ShopPageContent() {
     incrementUnauthLikeCount,
   } = usePreferences();
   const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
-  const [visibleCount, setVisibleCount] = useState(12);
 
   useEffect(() => {
     const saved = localStorage.getItem("artshop_shop_grid");
@@ -140,6 +139,52 @@ export function ShopPageContent() {
     units,
   });
 
+  const paginationResetKey = useMemo(
+    () =>
+      [
+        activeCountryCode,
+        sortIdx,
+        gridMode,
+        units,
+        filters.filterLiked ? "liked" : "all",
+        filters.categoryFilter.join(","),
+        filters.priceMin,
+        filters.priceMax,
+        filters.widthMin,
+        filters.widthMax,
+        filters.heightMin,
+        filters.heightMax,
+        filters.activeYears.join(","),
+        filters.activeOrientations.join(","),
+        filters.activeLabels.join(","),
+      ].join("|"),
+    [
+      activeCountryCode,
+      filters.activeLabels,
+      filters.activeOrientations,
+      filters.activeYears,
+      filters.categoryFilter,
+      filters.filterLiked,
+      filters.heightMax,
+      filters.heightMin,
+      filters.priceMax,
+      filters.priceMin,
+      filters.widthMax,
+      filters.widthMin,
+      gridMode,
+      sortIdx,
+      units,
+    ],
+  );
+
+  const { visibleCount, loadMoreRef } = useInfiniteVisibleCount<HTMLDivElement>({
+    totalCount: filtered.length,
+    pageSize: itemsPerPage,
+    resetKey: paginationResetKey,
+    preloadDistance: isMobile ? 1200 : 900,
+    enabled: !loading && !error,
+  });
+
   /** Updates pending likes locally, and occasionally prompts the user. */
   const handleAuthRequired = (id: number, isLiked: boolean) => {
     if (isLiked) {
@@ -199,19 +244,6 @@ export function ShopPageContent() {
 
   /** Calculate the total number of active filters to show count badges on mobile. */
   const clearAll = filterActions.clearAll;
-
-  const { ref: loadMoreRef, inView } = useInView({ rootMargin: "200px" });
-
-  // Handle initial pagination and reacts to filter changes by resetting the visible offset.
-  useEffect(() => {
-    setVisibleCount(itemsPerPage);
-  }, [filters, sortIdx, itemsPerPage]);
-
-  // Infinite scroll trigger: Increments display quota when the user approaches the end of the results.
-  useEffect(() => {
-    if (inView && visibleCount < filtered.length)
-      setVisibleCount((prev) => prev + itemsPerPage);
-  }, [inView, filtered.length, visibleCount, itemsPerPage]);
 
   const columnCount = getShopColumnCount({ isMobile, isPhone, gridMode });
   const gridColumns = getShopGridColumns(columnCount);

@@ -239,8 +239,8 @@ export function useShopFilters({
     setFilterLiked(false);
   }, [hGlobalMax, hGlobalMin, wGlobalMax, wGlobalMin]);
 
-  return {
-    state: {
+  const state = useMemo(
+    () => ({
       categoryFilter,
       priceMin,
       priceMax,
@@ -252,8 +252,24 @@ export function useShopFilters({
       activeOrientations,
       activeLabels,
       filterLiked,
-    },
-    actions: {
+    }),
+    [
+      activeLabels,
+      activeOrientations,
+      activeYears,
+      categoryFilter,
+      filterLiked,
+      heightMax,
+      heightMin,
+      priceMax,
+      priceMin,
+      widthMax,
+      widthMin,
+    ],
+  );
+
+  const actions = useMemo(
+    () => ({
       setCategoryFilter,
       setPriceMin,
       setPriceMax,
@@ -266,8 +282,19 @@ export function useShopFilters({
       setActiveLabels,
       setFilterLiked,
       clearAll,
-    },
-    bounds: { wGlobalMin, wGlobalMax, hGlobalMin, hGlobalMax },
+    }),
+    [clearAll],
+  );
+
+  const bounds = useMemo(
+    () => ({ wGlobalMin, wGlobalMax, hGlobalMin, hGlobalMax }),
+    [hGlobalMax, hGlobalMin, wGlobalMax, wGlobalMin],
+  );
+
+  return {
+    state,
+    actions,
+    bounds,
     availableYears,
     filtered,
     activeFilterCount,
