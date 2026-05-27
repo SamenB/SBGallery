@@ -34,6 +34,11 @@ export function ArtworkPipelineForm({
     uploadMasterAsset,
     deleteMasterAsset,
 }: ArtworkPipelineFormProps) {
+    const readinessSummary = workflowData?.readiness_summary ?? null;
+    const masterSlots = Array.isArray(workflowData?.master_slots)
+        ? workflowData.master_slots
+        : [];
+
     return (
         <div className="space-y-6">
             <FormSection
@@ -72,12 +77,12 @@ export function ArtworkPipelineForm({
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-semibold text-rose-700">
                     {workflowError}
                 </div>
-            ) : workflowData ? (
+            ) : workflowData && readinessSummary ? (
                 <>
                     <div className="flex items-center gap-3">
-                        <StatusBadge status={workflowData.readiness_summary.status} />
+                        <StatusBadge status={readinessSummary.status} />
                         <span className="text-sm font-semibold text-[#31323E]/70">
-                            {workflowData.readiness_summary.message}
+                            {readinessSummary.message}
                         </span>
                         {workflowLoading ? (
                             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#31323E]/35">
@@ -92,7 +97,7 @@ export function ArtworkPipelineForm({
                     </div>
 
                     <div className="space-y-4">
-                        {workflowData.master_slots.map((slot) => {
+                        {masterSlots.map((slot) => {
                             const asset = slot.uploaded_asset;
                             const assetMeta = (asset?.file_metadata || {}) as Record<string, unknown>;
                             const assetUrl = asset?.file_url
@@ -122,13 +127,31 @@ export function ArtworkPipelineForm({
                             const strategyLabel = getDerivativeStrategyLabel(
                                 slot.derivative_plan?.strategy
                             );
-                            const categoriesLabel = slot.covers_categories
+                            const coversCategories = Array.isArray(slot.covers_categories)
+                                ? slot.covers_categories
+                                : [];
+                            const derivesCategories = Array.isArray(slot.derives_categories)
+                                ? slot.derives_categories
+                                : [];
+                            const requiredForSizes = Array.isArray(slot.required_for_sizes)
+                                ? slot.required_for_sizes
+                                : [];
+                            const issues = Array.isArray(slot.issues)
+                                ? slot.issues
+                                : Array.isArray(slot.validation?.issues)
+                                ? slot.validation.issues
+                                : [];
+                            const warnings = Array.isArray(slot.warnings)
+                                ? slot.warnings
+                                : Array.isArray(slot.validation?.warnings)
+                                ? slot.validation.warnings
+                                : [];
+                            const categoriesLabel = coversCategories
                                 .map((categoryId) => formatPrintCategory(categoryId))
                                 .join(", ");
                             const derivesLabel =
-                                slot.derives_categories &&
-                                slot.derives_categories.length > 0
-                                    ? slot.derives_categories
+                                derivesCategories.length > 0
+                                    ? derivesCategories
                                           .map((categoryId) =>
                                               formatPrintCategory(categoryId)
                                           )
@@ -229,9 +252,9 @@ export function ArtworkPipelineForm({
                                                             ? ` · Largest ${slot.largest_size_label}`
                                                             : ""}
                                                     </p>
-                                                    {slot.required_for_sizes.length > 0 ? (
+                                                    {requiredForSizes.length > 0 ? (
                                                         <p className="mt-1 text-[11px] font-medium leading-relaxed text-[#31323E]/50">
-                                                            {slot.required_for_sizes.join(", ")}
+                                                            {requiredForSizes.join(", ")}
                                                         </p>
                                                     ) : null}
                                                 </div>
@@ -367,14 +390,23 @@ export function ArtworkPipelineForm({
 
                                     {/* Issues & warnings */}
                                     <div className="mt-3 space-y-2">
-                                        <IssueList title="Issues" items={slot.issues} tone="danger" />
-                                        <IssueList title="Warnings" items={slot.warnings} tone="warning" />
+                                        <IssueList title="Issues" items={issues} tone="danger" />
+                                        <IssueList title="Warnings" items={warnings} tone="warning" />
                                     </div>
                                 </div>
                             );
                         })}
+                        {masterSlots.length === 0 ? (
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-700">
+                                Print pipeline returned no master slots yet.
+                            </div>
+                        ) : null}
                     </div>
                 </>
+            ) : workflowData ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm font-semibold text-amber-700">
+                    Print pipeline returned incomplete readiness data.
+                </div>
             ) : null}
         </div>
     );
