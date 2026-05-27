@@ -72,66 +72,42 @@ export function useGalleryPage() {
 
   /* ── Infinite scroll via window scroll events ──
    *
-   * IntersectionObserver was unreliable on mobile browsers (callback
-   * wouldn't re-fire after React re-renders). A plain scroll listener
-   * with rAF throttle + a post-render re-check is simple and bulletproof.
+   * We calculate the remaining scrollable distance from the bottom of the page.
+   * If it is less than 800px, we load more items. This is highly reliable on
+   * both desktop and mobile browsers, and does not depend on sentinel elements
+   * or IntersectionObserver layout checks.
    */
   const totalRef = useRef(0);
   const pageRef = useRef(itemsPerPage);
   totalRef.current = allArtworks.length;
   pageRef.current = itemsPerPage;
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef(0);
-
   const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
-    sentinelRef.current = node;
+    // No-op callback ref to preserve component prop matching
   }, []);
 
-  /** True when the sentinel is within ~600px of the viewport bottom */
-  const isSentinelNear = useCallback(() => {
-    const el = sentinelRef.current;
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      return rect.top < window.innerHeight + 600;
-    }
-    // Fallback: check if user is near the bottom of the document
-    const scrollY = window.scrollY ?? window.pageYOffset;
-    const docHeight = document.documentElement.scrollHeight;
-    const viewH = window.innerHeight;
-    return docHeight - scrollY - viewH < 600;
-  }, []);
-
-  const maybeLoadMore = useCallback(() => {
-    if (!isSentinelNear()) return;
-    setVisibleCount((prev) => {
-      if (prev >= totalRef.current) return prev;
-      return prev + pageRef.current;
-    });
-  }, [isSentinelNear]);
-
-  // Scroll listener with rAF throttle
   useEffect(() => {
-    const onScroll = () => {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(maybeLoadMore);
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      const docHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+      const viewH = window.innerHeight || document.documentElement.clientHeight || 0;
+
+      if (docHeight - scrollY - viewH < 800) {
+        setVisibleCount((prev) => {
+          if (prev >= totalRef.current) return prev;
+          return prev + pageRef.current;
+        });
+      }
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Run an initial check after mounting / updating visibleCount to chain-load if necessary
+    handleScroll();
+
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, [maybeLoadMore]);
-
-  // After visibleCount changes, the sentinel may still be near the viewport
-  // (e.g. small batch sizes on large screens). Re-check after the browser
-  // has painted the new items so we chain-load if needed.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(maybeLoadMore);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [visibleCount, maybeLoadMore]);
+  }, [visibleCount, allArtworks.length]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
