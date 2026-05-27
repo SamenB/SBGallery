@@ -32,8 +32,8 @@ export function ArtworkDetailStyles() {
         .artwork-img-area {
           flex: unset;
           position: relative;
-          width: min(calc(100vw - 28px), 720px);
-          margin-left: calc(50% + 8px);
+          width: min(calc(100vw - 16px), 720px);
+          margin-left: 50%;
           margin-top: 1rem;
           transform: translateX(-50%);
           display: flex;
@@ -78,10 +78,10 @@ export function ArtworkDetailStyles() {
           .artwork-slider-wrap { min-height: 520px; }
         }
         @media (min-width: 1024px) {
-          .artwork-img-col { transform: translateX(-24px); }
+          .artwork-img-col { transform: translateX(-8px); }
         }
         @media (min-width: 1280px) {
-          .artwork-img-col { transform: translateX(-32px); }
+          .artwork-img-col { transform: translateX(-16px); }
         }
         .mobile-title-row { display: flex; }
         .desktop-title-row { display: none; }
