@@ -10,6 +10,12 @@ export function ArtworkDetailsSection({
   work: Artwork;
   layoutMetrics: ArtworkLayoutMetrics;
 }) {
+  const description = work.description?.trim();
+
+  if (!description) {
+    return null;
+  }
+
   return (
     <div
       style={{
@@ -60,7 +66,7 @@ export function ArtworkDetailsSection({
                 color: "var(--color-charcoal-mid)",
               }}
             >
-              {work.description || "Artwork description is not available yet."}
+              {description}
             </p>
           </div>
           <div>
