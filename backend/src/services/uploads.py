@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
-from PIL import Image
+from PIL import Image, ImageOps
 
 from src.exeptions import InvalidDataException
 
@@ -30,6 +30,8 @@ class ImageUploadService:
 
             def process_image():
                 with Image.open(temp_path) as img:
+                    img = ImageOps.exif_transpose(img)
+
                     if img.mode in ("RGBA", "LA") or (
                         img.mode == "P" and "transparency" in img.info
                     ):

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from loguru import logger
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy import select, update
 
 from src.database import new_session_null_pool
@@ -46,6 +46,8 @@ def run_async(coro):
 
 
 def _normalize_image_for_webp(img: Image.Image) -> Image.Image:
+    img = ImageOps.exif_transpose(img)
+
     if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
         alpha = img.convert("RGBA").split()[-1]
         bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
