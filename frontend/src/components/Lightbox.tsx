@@ -115,7 +115,7 @@ export default function Lightbox({
         {currentImage ? (
           <img
             ref={setArtworkVisualRef}
-            className="block max-h-[94vh] max-w-[94vw] bg-white object-contain shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
+            className="lb-artwork-visual block bg-white object-contain shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
             src={getImageUrl(currentImage, "original")}
             alt={lightbox.work.title}
             draggable={false}
@@ -124,7 +124,7 @@ export default function Lightbox({
         ) : (
           <div
             ref={setArtworkVisualRef}
-            className="h-[94vh] max-h-[800px] w-[94vw] max-w-[800px] shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
+            className="lb-artwork-visual h-[94vh] max-h-[800px] shadow-[0_40px_90px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.12)]"
             style={{
               background: `linear-gradient(160deg, ${lightbox.work.gradientFrom} 0%, ${lightbox.work.gradientTo} 100%)`,
             }}

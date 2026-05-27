@@ -32,8 +32,8 @@ export function ArtworkDetailStyles() {
         .artwork-img-area {
           flex: unset;
           position: relative;
-          width: min(calc(100vw - 16px), 720px);
-          margin-left: 50%;
+          width: min(calc(100vw - 28px), 720px);
+          margin-left: calc(50% + 8px);
           margin-top: 1rem;
           transform: translateX(-50%);
           display: flex;

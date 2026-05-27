@@ -77,6 +77,25 @@ export function LightboxStyles() {
         font-size: min(7.5vw, 1.95rem);
         line-height: 1.08;
       }
+      .lb-artwork-visual {
+        max-width: 94vw;
+        max-height: 94vh;
+      }
+      div.lb-artwork-visual {
+        width: 94vw;
+        max-width: 800px;
+      }
+      @media (max-width: 767px) {
+        .lb-artwork-visual {
+          width: 100vw;
+          max-width: 100vw;
+          max-height: none;
+        }
+        div.lb-artwork-visual {
+          width: 100vw;
+          max-width: 100vw;
+        }
+      }
       @media (min-width: 768px) {
         .lb-header {
           top: 2.5rem !important;
