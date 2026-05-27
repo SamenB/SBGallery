@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useInView } from "react-intersection-observer";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "@/context/PreferencesContext";
 import { useUser } from "@/context/UserContext";
 import { apiFetch, getApiUrl } from "@/utils";
@@ -68,9 +67,68 @@ export function useGalleryPage() {
   const [error, setError] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const { ref: loadMoreRef, inView } = useInView({ rootMargin: "200px" });
 
   const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
+
+  /* ── Robust infinite-scroll via manual IntersectionObserver ──
+   *
+   * The previous useInView + useEffect chain could get stuck on mobile:
+   * inView stayed true but the effect dependency chain didn't re-fire
+   * reliably across React re-renders. A manual observer with explicit
+   * re-observation after each page load fixes this.
+   */
+  const totalRef = useRef(0);
+  const pageRef = useRef(itemsPerPage);
+  totalRef.current = allArtworks.length;
+  pageRef.current = itemsPerPage;
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const loadMoreRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      sentinelRef.current = node;
+      if (!node) return;
+
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (entry?.isIntersecting) {
+            setVisibleCount((prev) => {
+              if (prev >= totalRef.current) return prev;
+              return prev + pageRef.current;
+            });
+          }
+        },
+        { rootMargin: "400px" },
+      );
+      observerRef.current.observe(node);
+    },
+    [],
+  );
+
+  // Cleanup observer on unmount
+  useEffect(() => {
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  /*
+   * Re-observe the sentinel after visibleCount changes so the observer
+   * fires again if the sentinel is still in view (= we need another page).
+   */
+  useEffect(() => {
+    const node = sentinelRef.current;
+    const obs = observerRef.current;
+    if (!node || !obs) return;
+    obs.unobserve(node);
+    obs.observe(node);
+  }, [visibleCount]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -130,12 +188,6 @@ export function useGalleryPage() {
   useEffect(() => {
     setVisibleCount((prev) => Math.max(prev, itemsPerPage));
   }, [itemsPerPage]);
-
-  useEffect(() => {
-    if (inView && visibleCount < allArtworks.length) {
-      setVisibleCount((prev) => prev + itemsPerPage);
-    }
-  }, [allArtworks.length, inView, itemsPerPage, visibleCount]);
 
   const handleSetGridMode = (val: GalleryGridMode) => {
     setGridMode(val);
