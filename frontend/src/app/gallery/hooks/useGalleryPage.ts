@@ -70,65 +70,68 @@ export function useGalleryPage() {
 
   const itemsPerPage = gridMode === "3" ? 36 : gridMode === "2" ? 24 : 12;
 
-  /* ── Robust infinite-scroll via manual IntersectionObserver ──
+  /* ── Infinite scroll via window scroll events ──
    *
-   * The previous useInView + useEffect chain could get stuck on mobile:
-   * inView stayed true but the effect dependency chain didn't re-fire
-   * reliably across React re-renders. A manual observer with explicit
-   * re-observation after each page load fixes this.
+   * IntersectionObserver was unreliable on mobile browsers (callback
+   * wouldn't re-fire after React re-renders). A plain scroll listener
+   * with rAF throttle + a post-render re-check is simple and bulletproof.
    */
   const totalRef = useRef(0);
   const pageRef = useRef(itemsPerPage);
   totalRef.current = allArtworks.length;
   pageRef.current = itemsPerPage;
 
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef(0);
 
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-      sentinelRef.current = node;
-      if (!node) return;
-
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          if (entry?.isIntersecting) {
-            setVisibleCount((prev) => {
-              if (prev >= totalRef.current) return prev;
-              return prev + pageRef.current;
-            });
-          }
-        },
-        { rootMargin: "400px" },
-      );
-      observerRef.current.observe(node);
-    },
-    [],
-  );
-
-  // Cleanup observer on unmount
-  useEffect(() => {
-    return () => {
-      observerRef.current?.disconnect();
-    };
+  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    sentinelRef.current = node;
   }, []);
 
-  /*
-   * Re-observe the sentinel after visibleCount changes so the observer
-   * fires again if the sentinel is still in view (= we need another page).
-   */
+  /** True when the sentinel is within ~600px of the viewport bottom */
+  const isSentinelNear = useCallback(() => {
+    const el = sentinelRef.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      return rect.top < window.innerHeight + 600;
+    }
+    // Fallback: check if user is near the bottom of the document
+    const scrollY = window.scrollY ?? window.pageYOffset;
+    const docHeight = document.documentElement.scrollHeight;
+    const viewH = window.innerHeight;
+    return docHeight - scrollY - viewH < 600;
+  }, []);
+
+  const maybeLoadMore = useCallback(() => {
+    if (!isSentinelNear()) return;
+    setVisibleCount((prev) => {
+      if (prev >= totalRef.current) return prev;
+      return prev + pageRef.current;
+    });
+  }, [isSentinelNear]);
+
+  // Scroll listener with rAF throttle
   useEffect(() => {
-    const node = sentinelRef.current;
-    const obs = observerRef.current;
-    if (!node || !obs) return;
-    obs.unobserve(node);
-    obs.observe(node);
-  }, [visibleCount]);
+    const onScroll = () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(maybeLoadMore);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [maybeLoadMore]);
+
+  // After visibleCount changes, the sentinel may still be near the viewport
+  // (e.g. small batch sizes on large screens). Re-check after the browser
+  // has painted the new items so we chain-load if needed.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(maybeLoadMore);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [visibleCount, maybeLoadMore]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
