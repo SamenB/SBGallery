@@ -10,6 +10,7 @@ import { PreferencesProvider } from "@/context/PreferencesContext";
 import { UserProvider } from "@/context/UserContext";
 import { CartProvider } from "@/context/CartContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import ClientErrorReporter from "@/components/ClientErrorReporter";
 import PostHogProvider from "@/components/PostHogProvider";
 import { type ReactNode } from "react";
 
@@ -22,6 +23,7 @@ export default function ClientProviders({ children }: { children: ReactNode }) {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
     return (
         <PostHogProvider>
+            <ClientErrorReporter />
             <GoogleOAuthProvider clientId={clientId}>
                 <PreferencesProvider>
                     <CartProvider>

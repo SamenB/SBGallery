@@ -20,6 +20,7 @@ from loguru import logger
 from src.api.artworks import bulk_router as artworks_bulk_router
 from src.api.artworks import router as artworks_router
 from src.api.auth import router as auth_router
+from src.api.client_errors import router as client_errors_router
 from src.api.contact import router as contact_router
 from src.api.email_templates import router as email_templates_router
 from src.api.geo import router as geo_router
@@ -125,6 +126,7 @@ app.include_router(payments_router)
 app.include_router(users_router)
 app.include_router(settings_router)
 app.include_router(upload_router)
+app.include_router(client_errors_router)
 app.include_router(contact_router)
 app.include_router(email_templates_router)
 app.include_router(print_pricing_router)
